@@ -1,0 +1,14 @@
+[
+  {
+    "project_name": "SGRE_Agora_BankStmt",
+    "file_size_mb": 0.3011159896850586,
+    "duration_seconds": 207.08142185211182,
+    "timestamp": "2025-04-17T14:46:59.232385"
+  },
+  {
+    "project_name": "getNamesAndCustomID",
+    "file_size_mb": 0.0648193359375,
+    "duration_seconds": 93.78176283836365,
+    "timestamp": "2025-04-17T14:58:04.758113"
+  }
+]
