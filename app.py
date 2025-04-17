@@ -27,7 +27,7 @@ from datetime import datetime
 # Load environment variables
 load_dotenv()
 
-# Set page config with improved layout
+# Set page config with dark theme
 st.set_page_config(
     page_title="WM to SnapLogic Migrator",
     page_icon="icon.webp",
@@ -40,147 +40,527 @@ st.set_page_config(
     }
 )
 
-# Hide sidebar and other default elements
+# Apply dark theme
 st.markdown("""
-<style>
-    [data-testid="collapsedControl"] {
-        display: none
-    }
-    #MainMenu {
-        visibility: hidden;
-    }
-    footer {
-        visibility: hidden;
-    }
-
-    /* Base styles */
-    .main-header {
-        background: linear-gradient(90deg, #1E88E5 0%, #1976D2 100%);
-        padding: 2rem;
-        border-radius: 10px;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        animation: slideIn 0.5s ease;
-        width: calc(66.67% - 1rem);
-        box-sizing: border-box;
-    }
-    .main-header h1 {
-        color: white !important;
-        margin: 0 !important;
-        font-size: 2rem !important;
-        line-height: 1.2 !important;
-        margin-bottom: 0.5rem !important;
-    }
-    .main-header p {
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 1rem !important;
-        line-height: 1.4 !important;
-        margin-top: 1rem;
-        margin-bottom: 0;
-    }
-    .steps-container {
-        background: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 8px;
-        margin: 1rem 0;
-        transition: all 0.3s ease;
-        width: 100%;
-        box-sizing: border-box;
-    }
-    .stats-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        margin-bottom: 1rem;
-        border: 1px solid #e0e0e0;
-        transition: all 0.3s ease;
-        width: 100%;
-        box-sizing: border-box;
-    }
-    .upload-section {
-        background: white;
-        padding: 2rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        border: 2px dashed #1E88E5;
-        text-align: center;
-        margin-bottom: 2rem;
-        transition: all 0.3s ease;
-        width: 100%;
-        box-sizing: border-box;
-    }
-
-    /* Layout adjustments */
-    [data-testid="stHorizontalBlock"] {
-        align-items: flex-start !important;
-        gap: 2rem !important;
-    }
-
-    /* Right column adjustments */
-    [data-testid="stHorizontalBlock"] > div:nth-child(2) {
-        margin-top: -13.2rem !important;
-        padding-top: 0 !important;
-    }
-
-    /* Ensure proper spacing between right column elements */
-    [data-testid="stExpander"] {
-        z-index: 1;
-        margin-bottom: 1rem !important;
-    }
-
-    .stats-card {
-        margin-top: 1rem !important;
-    }
-
-    /* Adjust main header to prevent any overlap */
-    .main-header {
-        z-index: 0;
-        position: relative;
-        margin-bottom: 3rem !important;
-    }
-
-    /* Other styles */
-    .step-item {
-        display: flex;
-        align-items: center;
-        margin: 0.5rem 0;
-        padding: 0.5rem;
-        border-radius: 4px;
-        transition: background-color 0.3s;
-    }
-    .step-number {
-        background: #1E88E5;
-        color: white;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 1rem;
-        font-size: 0.9rem;
-    }
-    .stat-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid #f0f0f0;
-    }
-    .stat-item:last-child {
-        border-bottom: none;
-    }
-    @keyframes slideIn {
-        from {
-            transform: translateY(-10px);
-            opacity: 0;
+    <style>
+        /* Force dark theme */
+        [data-testid="stAppViewContainer"] {
+            background-color: #0e1117;
         }
-        to {
-            transform: translateY(0);
-            opacity: 1;
+        
+        [data-testid="stSidebar"] {
+            background-color: #0e1117;
         }
-    }
-</style>
+        
+        [data-testid="stHeader"] {
+            background-color: #0e1117;
+        }
+        
+        .stMarkdown {
+            color: #fafafa !important;
+        }
+        
+        /* Hide default elements */
+        [data-testid="collapsedControl"] {
+            display: none;
+        }
+        #MainMenu {
+            visibility: hidden;
+        }
+        footer {
+            visibility: hidden;
+        }
+
+        /* Base styles with dark theme */
+        .main-header {
+            background: linear-gradient(90deg, #1E88E5 0%, #1976D2 100%);
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            animation: slideIn 0.5s ease;
+            width: calc(66.67% - 1rem);
+            box-sizing: border-box;
+        }
+        .main-header h1 {
+            color: white !important;
+            margin: 0 !important;
+            font-size: 2rem !important;
+            line-height: 1.2 !important;
+            margin-bottom: 0.5rem !important;
+        }
+        .main-header p {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-size: 1rem !important;
+            line-height: 1.4 !important;
+            margin-top: 1rem;
+            margin-bottom: 0;
+        }
+
+        /* Dark theme styles */
+        .steps-container {
+            background: #1e1e2f;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            transition: all 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #2d2d44;
+            color: #fafafa !important;
+        }
+        .stats-card {
+            background: #1e1e2f;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            margin-bottom: 1rem;
+            border: 1px solid #2d2d44;
+            transition: all 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
+            color: #fafafa !important;
+        }
+        .upload-section {
+            background: #1e1e2f;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            border: 2px dashed #1E88E5;
+            text-align: center;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
+            color: #fafafa !important;
+        }
+
+        /* Step items styling */
+        .step-item {
+            display: flex;
+            align-items: center;
+            margin: 0.5rem 0;
+            padding: 0.8rem;
+            border-radius: 6px;
+            background: #1e1e2f;
+            border: 1px solid #2d2d44;
+            transition: all 0.2s ease;
+            color: #fafafa !important;
+        }
+        .step-item:hover {
+            background: #2a2a3d;
+            transform: translateX(5px);
+        }
+        .step-number {
+            background: #1E88E5;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        /* History items styling */
+        .history-item {
+            background: #1e1e2f;
+            border: 1px solid #2d2d44;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 0.8rem;
+            transition: all 0.2s ease;
+            color: #fafafa !important;
+        }
+        .history-item:hover {
+            background: #2a2a3d;
+            transform: translateX(5px);
+        }
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            color: #fafafa !important;
+        }
+        .history-timestamp {
+            color: #fafafa !important;
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+        .history-item-details {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: #fafafa !important;
+            opacity: 0.9;
+        }
+
+        /* Empty state styling */
+        .empty-history {
+            text-align: center;
+            padding: 2rem;
+            color: #fafafa !important;
+            opacity: 0.7;
+        }
+        .empty-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            padding: 1rem 2rem;
+            border-radius: 6px;
+            background: #1e1e2f;
+            border: 1px solid #2d2d44;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            color: #fafafa !important;
+        }
+
+        /* Info message styling */
+        .info-message {
+            background: #1e1e2f !important;
+            border: 1px solid #2d2d44 !important;
+            color: #fafafa !important;
+        }
+        .info-message h4 {
+            color: #1E88E5 !important;
+        }
+
+        /* Streamlit element overrides */
+        .stButton button {
+            width: 100%;
+            background: #1E88E5 !important;
+            color: white !important;
+            border: none !important;
+            padding: 0.5rem 1rem !important;
+            border-radius: 6px !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
+        }
+        .stButton button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        
+        /* File uploader styling */
+        div[data-testid="stFileUploader"] {
+            width: 100%;
+        }
+
+        /* Upload box background */
+        div[data-testid="stFileUploader"] > section {
+            background-color: #1e1e2f !important;
+            border: 2px dashed #1E88E5 !important;
+            border-radius: 10px !important;
+            padding: 2rem !important;
+        }
+
+        /* Main upload text */
+        div[data-testid="stFileUploader"] p {
+            color: #fafafa !important;
+            font-size: 1.1rem !important;
+            font-weight: 500 !important;
+        }
+
+        /* File size limit text */
+        div[data-testid="stFileUploader"] small {
+            color: rgba(250, 250, 250, 0.7) !important;
+        }
+
+        /* Browse files button */
+        div[data-testid="stFileUploader"] button {
+            background-color: #1E88E5 !important;
+            color: white !important;
+            border: none !important;
+            padding: 0.5rem 1rem !important;
+            border-radius: 6px !important;
+            font-weight: 500 !important;
+            margin-top: 1rem !important;
+        }
+
+        /* Ensure text is visible in all states */
+        div[data-testid="stFileUploader"] * {
+            color: #fafafa !important;
+        }
+
+        /* Override Streamlit's default styles */
+        .css-1aehpvj, .css-16idsys, .css-1vbkxwb {
+            color: #fafafa !important;
+        }
+
+        /* Fix any dynamic class text colors */
+        [class*="css"] {
+            color: #fafafa !important;
+        }
+
+        /* Specific fix for the drag and drop text */
+        div[data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p {
+            color: #fafafa !important;
+        }
+
+        /* Fix for the file size text */
+        div[data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] div {
+            color: rgba(250, 250, 250, 0.7) !important;
+        }
+
+        /* Ensure the upload icon is visible */
+        div[data-testid="stFileUploader"] svg {
+            color: #1E88E5 !important;
+        }
+
+        /* Style for drag over state */
+        div[data-testid="stFileUploader"]:focus-within section {
+            border-color: #64B5F6 !important;
+            background-color: #2a2a3d !important;
+        }
+
+        /* Fix for any nested text elements */
+        div[data-testid="stFileUploader"] span,
+        div[data-testid="stFileUploader"] label,
+        div[data-testid="stFileUploader"] div {
+            color: #fafafa !important;
+        }
+
+        /* Specific override for the upload text */
+        .upload-text {
+            color: #fafafa !important;
+            font-weight: 500 !important;
+        }
+
+        /* Layout adjustments */
+        [data-testid="stHorizontalBlock"] {
+            align-items: flex-start !important;
+            gap: 2rem !important;
+        }
+        
+        /* Right column adjustments */
+        [data-testid="stHorizontalBlock"] > div:nth-child(2) {
+            margin-top: -13.2rem !important;
+            padding-top: 0 !important;
+        }
+        
+        /* Ensure proper spacing */
+        [data-testid="stExpander"] {
+            margin-bottom: 1rem !important;
+        }
+        
+        .stats-card {
+            margin-top: 1rem !important;
+        }
+        
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                transform: translateY(-10px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        [data-testid="stFileUploader"] label {
+            font-size: 1.1rem !important;
+            color: #fafafa !important;
+            font-weight: 500 !important;
+        }
+        [data-testid="stFileUploader"] small {
+            color: rgba(250, 250, 250, 0.7) !important;
+        }
+        [data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] {
+            color: #fafafa !important;
+        }
+
+        /* File Details Section Styling */
+        .file-details {
+            background: #1e1e2f !important;
+            border-radius: 10px !important;
+            padding: 1.5rem !important;
+            margin: 1rem 0 !important;
+            border: 1px solid #2d2d44 !important;
+        }
+
+        /* File Details Header */
+        .file-details h3 {
+            color: #fafafa !important;
+            font-size: 1.2rem !important;
+            margin-bottom: 1rem !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+        }
+
+        /* File Name Styling */
+        .file-name {
+            color: #fafafa !important;
+            font-size: 1.1rem !important;
+            margin-bottom: 1rem !important;
+            font-weight: 500 !important;
+        }
+
+        /* File Properties */
+        .file-property {
+            color: #fafafa !important;
+            margin: 0.5rem 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+        }
+
+        .file-property-label {
+            color: rgba(250, 250, 250, 0.7) !important;
+            font-weight: 500 !important;
+        }
+
+        .file-property-value {
+            color: #fafafa !important;
+        }
+
+        /* Migration Time Estimate Section */
+        .estimate-section {
+            background: #1e1e2f !important;
+            border-radius: 10px !important;
+            padding: 1.5rem !important;
+            margin: 1rem 0 !important;
+            border: 1px solid #2d2d44 !important;
+        }
+
+        .estimate-header {
+            color: #1E88E5 !important;
+            font-size: 1.2rem !important;
+            margin-bottom: 1rem !important;
+            font-weight: 500 !important;
+        }
+
+        .estimate-detail {
+            color: #fafafa !important;
+            margin: 0.5rem 0 !important;
+        }
+
+        .estimate-label {
+            color: rgba(250, 250, 250, 0.7) !important;
+            font-weight: 500 !important;
+        }
+
+        .estimate-value {
+            color: #fafafa !important;
+        }
+
+        .estimate-note {
+            color: rgba(250, 250, 250, 0.6) !important;
+            font-style: italic !important;
+            margin-top: 1rem !important;
+            font-size: 0.9rem !important;
+        }
+
+        /* Override Streamlit's default text colors in file details */
+        [data-testid="stMarkdownContainer"] p,
+        [data-testid="stMarkdownContainer"] span,
+        [data-testid="stMarkdownContainer"] div {
+            color: #fafafa !important;
+        }
+
+        /* Style for file size and other metadata */
+        .file-metadata {
+            color: rgba(250, 250, 250, 0.7) !important;
+            font-size: 0.9rem !important;
+        }
+
+        /* Ensure all text in the details section is visible */
+        div[data-testid="stFileUploader"] ~ div * {
+            color: #fafafa !important;
+        }
+
+        /* Settings Box Styling */
+        [data-testid="stExpander"] {
+            background-color: #1e1e2f !important;
+            border: 1px solid #2d2d44 !important;
+            border-radius: 10px !important;
+            margin-bottom: 1rem !important;
+        }
+
+        /* Settings Header */
+        [data-testid="stExpander"] details summary {
+            padding: 1rem !important;
+            background-color: #1e1e2f !important;
+            border-radius: 10px !important;
+            color: #fafafa !important;
+            font-weight: 500 !important;
+            font-size: 1.1rem !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+        }
+
+        /* Settings Content */
+        [data-testid="stExpander"] details div[data-testid="stExpanderContent"] {
+            background-color: #1e1e2f !important;
+            border-top: 1px solid #2d2d44 !important;
+            padding: 1rem !important;
+            color: #fafafa !important;
+        }
+
+        /* Settings Icon */
+        [data-testid="stExpander"] svg {
+            color: #1E88E5 !important;
+        }
+
+        /* Settings Text */
+        [data-testid="stExpander"] p,
+        [data-testid="stExpander"] span,
+        [data-testid="stExpander"] div {
+            color: #fafafa !important;
+        }
+
+        /* Settings Hover Effect */
+        [data-testid="stExpander"] details summary:hover {
+            background-color: #2a2a3d !important;
+            cursor: pointer;
+        }
+
+        /* Settings Arrow Icon */
+        [data-testid="stExpander"] details summary::-webkit-details-marker,
+        [data-testid="stExpander"] details summary::marker {
+            color: #1E88E5 !important;
+        }
+
+        /* No Settings Message */
+        [data-testid="stExpander"] .no-settings {
+            color: rgba(250, 250, 250, 0.7) !important;
+            font-style: italic !important;
+            text-align: center !important;
+            padding: 1rem !important;
+        }
+
+        /* Settings Divider */
+        [data-testid="stExpander"] hr {
+            border-color: #2d2d44 !important;
+            margin: 1rem 0 !important;
+        }
+
+        /* Make sure the expander text is visible */
+        .streamlit-expanderHeader {
+            color: #fafafa !important;
+            background-color: #1e1e2f !important;
+            font-weight: 500 !important;
+        }
+
+        /* Override any Streamlit default colors */
+        div[class*="stMarkdown"] > div[data-testid="stExpanderContent"] p {
+            color: #fafafa !important;
+        }
+    </style>
 """, unsafe_allow_html=True)
 
 # Initialize migration estimator
@@ -230,18 +610,12 @@ if 'migration_history' not in st.session_state:
     st.session_state['migration_history'] = load_history()
 if 'current_migration' not in st.session_state:
     st.session_state['current_migration'] = None
-if 'dark_mode' not in st.session_state:
-    st.session_state['dark_mode'] = False
 if 'upload_key' not in st.session_state:
     st.session_state['upload_key'] = 0
 
 def reset_upload():
     """Reset the file uploader by incrementing the key"""
     st.session_state['upload_key'] += 1
-
-# Configure page and theme
-if 'dark_mode' not in st.session_state:
-    st.session_state['dark_mode'] = False
 
 # Main page header with animation and improved styling
 st.markdown("""
@@ -286,7 +660,7 @@ with col_left:
     
     # Upload section
     uploaded_file = st.file_uploader(
-        "Upload your webMethods project ZIP file",
+        label="Upload your webMethods project ZIP file",
         type="zip",
         key=f"project_uploader_{st.session_state['upload_key']}",
         help="Upload a ZIP file containing your webMethods project artifacts.",
@@ -295,37 +669,65 @@ with col_left:
     
     # Show file preview and time estimate if a file is uploaded
     if uploaded_file is not None:
+        # File Details Section
         st.markdown("""
-        <div class="skeleton"></div>
-        <div class="skeleton" style="width: 60%;"></div>
-        """, unsafe_allow_html=True)
-        show_file_preview(uploaded_file)
+            <div class="file-details">
+                <h3>📁 File Details</h3>
+                <div class="file-name">{}</div>
+                <div class="file-property">
+                    <span class="file-property-label">Size:</span>
+                    <span class="file-property-value">{:.2f} MB</span>
+                </div>
+            </div>
+        """.format(
+            uploaded_file.name,
+            uploaded_file.size / (1024 * 1024)
+        ), unsafe_allow_html=True)
         
         # Calculate and show time estimate
         file_size_mb = uploaded_file.size / (1024 * 1024)
         estimated_time, estimate_details = estimator.estimate_migration_time(file_size_mb)
         
         # Show time estimate with confidence level
-        st.markdown("### ⏱️ Migration Time Estimate")
-        st.markdown(f"""
-        <div class="info-message" style="background-color: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid #1E88E5;">
-            <h4 style="color: #1E88E5; margin-bottom: 0.5rem;">Estimated Duration: {estimator.format_time_estimate(estimated_time)}</h4>
-            <p style="margin-bottom: 0.5rem;"><strong>Confidence Level:</strong> {estimate_details['confidence'].title()}</p>
-            <p style="margin-bottom: 0.5rem;"><strong>File Size:</strong> {file_size_mb:.2f} MB</p>
-            <p style="margin-bottom: 0.5rem;"><strong>Complexity:</strong> {estimate_details['complexity'].title()}</p>
-            <p style="color: #666; font-style: italic;">{estimate_details['explanation']}</p>
-            {f'<p style="color: #666;"><strong>Note:</strong> {estimate_details["note"]}</p>' if 'note' in estimate_details else ''}
-            {f'<p style="color: #666;"><strong>Similar Files Range:</strong> {estimate_details["similar_sizes_range"]}</p>' if 'similar_sizes_range' in estimate_details else ''}
-            {f'<p style="color: #666;"><strong>Data Range:</strong> {estimate_details["data_range"]}</p>' if 'data_range' in estimate_details else ''}
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("""
+            <div class="estimate-section">
+                <div class="estimate-header">⏱️ Migration Time Estimate</div>
+                <div class="estimate-detail">
+                    <span class="estimate-label">Estimated Duration:</span>
+                    <span class="estimate-value">{}</span>
+                </div>
+                <div class="estimate-detail">
+                    <span class="estimate-label">Confidence Level:</span>
+                    <span class="estimate-value">{}</span>
+                </div>
+                <div class="estimate-detail">
+                    <span class="estimate-label">File Size:</span>
+                    <span class="estimate-value">{:.2f} MB</span>
+                </div>
+                <div class="estimate-detail">
+                    <span class="estimate-label">Complexity:</span>
+                    <span class="estimate-value">{}</span>
+                </div>
+                <div class="estimate-note">{}</div>
+                {}
+                {}
+            </div>
+        """.format(
+            estimator.format_time_estimate(estimated_time),
+            estimate_details['confidence'].title(),
+            file_size_mb,
+            estimate_details['complexity'].title(),
+            estimate_details['explanation'],
+            f'<div class="estimate-note">Note: {estimate_details["note"]}</div>' if 'note' in estimate_details else '',
+            f'<div class="estimate-detail"><span class="estimate-label">Similar Files Range:</span> <span class="estimate-value">{estimate_details["similar_sizes_range"]}</span></div>' if 'similar_sizes_range' in estimate_details else ''
+        ), unsafe_allow_html=True)
         
-        # Add a clear button
-        if st.button("Clear File", key="clear_file"):
+        # Add clear button with proper styling
+        if st.button("Clear File", key="clear_file", help="Click to remove the current file"):
             reset_upload()
             st.rerun()
         
-        # Migrate button
+        # Migrate button with proper styling
         migrate_button = st.button(
             "🚀 Start Migration",
             type="primary",
@@ -430,12 +832,9 @@ with col_left:
 
 # Right column - Settings, Statistics, and History
 with col_right:
-    # Settings expander
+    # Settings expander (removed dark mode toggle)
     with st.expander("⚙️ Settings", expanded=False):
-        dark_mode = st.toggle("🌙 Dark Mode", value=st.session_state['dark_mode'])
-        if dark_mode != st.session_state['dark_mode']:
-            st.session_state['dark_mode'] = dark_mode
-            st.rerun()
+        st.markdown("No settings available")
 
     # Statistics section
     stats = estimator.get_migration_statistics()
