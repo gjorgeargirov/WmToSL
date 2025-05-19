@@ -1,929 +1,1573 @@
 import streamlit as st
-import requests
 import json
-import os
 import time
-from dotenv import load_dotenv
-from error_handlers import (
-    handle_api_error,
-    handle_file_validation,
-    handle_network_error,
-    handle_migration_error,
-    MigrationError
-)
-from ui_components import (
-    apply_custom_styling,
-    show_progress_bar,
-    show_success_message,
-    show_error_message,
-    show_migration_status,
-    show_migration_history,
-    show_file_preview,
-    show_tooltip
-)
-from migration_estimator import MigrationEstimator
-from datetime import datetime
+import config
+import api_helpers
+import os
+from PIL import Image
+import random
+import base64
 
-# Load environment variables
-load_dotenv()
-
-# Set page config with dark theme
+# Set page configuration
 st.set_page_config(
-    page_title="WM to SnapLogic Migrator",
+    page_title="WebMethods to SnapLogic Migration",
     page_icon="icon.webp",
     layout="wide",
     initial_sidebar_state="collapsed",
-    menu_items={
-        'Get Help': None,
-        'Report a bug': None,
-        'About': None
-    }
 )
 
-# Apply dark theme
+# Initialize session state for migration status
+if 'is_migrating' not in st.session_state:
+    st.session_state.is_migrating = False
+
+# Custom CSS for the app
 st.markdown("""
-    <style>
-        /* Force dark theme */
-        [data-testid="stAppViewContainer"] {
-            background-color: #0e1117;
+<style>
+    /* Layout and spacing */
+    .main {
+        padding: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    /* Header styling */
+    .header-layout {
+        display: flex;
+        align-items: flex-start;
+        gap: 0px;
+        margin-bottom: 20px;
+    }
+    
+    .logo-container {
+        flex: 0 0 auto;
+        padding-top: 5px;
+        padding-right: 0;
+    }
+    
+    .title-container {
+        flex: 1;
+        padding-left: 0;
+        margin-left: 0;
+    }
+    
+    .title-container h1 {
+        color: #333;
+        font-size: 34px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        line-height: 1.2;
+        margin-left: 0;
+        padding-left: 0;
+    }
+    
+    .title-container h2 {
+        color: #666;
+        font-size: 22px;
+        font-weight: 400;
+        margin-top: 0;
+        margin-left: 0;
+        padding-left: 0;
+    }
+    
+    /* Banner styling */
+    .info-banner {
+        background-color: #f0f6ff;
+        border-left: 4px solid #6366f1;
+        padding: 16px 20px;
+        border-radius: 4px;
+        margin: 20px 0 30px 0;
+    }
+    
+    /* Card styling */
+    .card {
+        background-color: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+        border: 1px solid #f0f0f0;
+        transition: all 0.2s ease;
+    }
+    
+    /* Clean card without border/shadow - for the empty state as in screenshot */
+    .clean-card {
+        background-color: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border: 1px solid #f0f0f0;
+    }
+    
+    /* Card hover effect */
+    .card:hover {
+        box-shadow: 0 10px 15px rgba(0,0,0,0.05), 0 4px 6px rgba(0,0,0,0.05);
+        border-color: #e6e6e6;
+    }
+    
+    /* Custom file upload area */
+    .file-upload-container {
+        margin: 20px 0;
+        border: 2px dashed #d1d5db;
+        border-radius: 10px;
+        padding: 30px 20px;
+        text-align: center;
+        background-color: #f9fafb;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .file-upload-container:hover {
+        border-color: #6366f1;
+        background-color: #f8fafc;
+    }
+    
+    .upload-icon {
+        font-size: 40px;
+        color: #9ca3af;
+        margin-bottom: 15px;
+    }
+    
+    .drag-text {
+        font-size: 18px;
+        color: #4b5563;
+        margin-bottom: 10px;
+    }
+    
+    .file-info {
+        font-size: 14px;
+        color: #6b7280;
+    }
+    
+    /* Animated file upload button */
+    .file-upload-btn {
+        background-color: #6366f1;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 15px;
+        transition: all 0.3s ease;
+        display: inline-block;
+    }
+    
+    .file-upload-btn:hover {
+        background-color: #4f46e5;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    /* File drop highlight */
+    .file-drop-active {
+        border-color: #6366f1;
+        background-color: #eef2ff;
+    }
+    
+    /* Upload section */
+    .upload-section {
+        background-color: #f9fafb;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        border: 2px dashed #e5e7eb;
+        transition: all 0.3s ease;
+    }
+    
+    .upload-section:hover {
+        border-color: #6366f1;
+        background-color: #f8fafc;
+    }
+    
+    /* Button styling */
+    .stButton button {
+        background-color: #6366f1;
+        color: white;
+        font-weight: 600;
+        height: 3.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(99, 102, 241, 0.2);
+        transition: all 0.3s ease;
+        padding: 0 2rem;
+        margin-top: 1rem;
+        border: none;
+    }
+    
+    .stButton button:hover {
+        background-color: #4f46e5;
+        box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+        transform: translateY(-2px);
+    }
+    
+    /* File detail card */
+    .file-details-card {
+        background-color: #f0f9ff;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+        border-left: 3px solid #0ea5e9;
+        transition: all 0.2s ease;
+    }
+    
+    .file-details-card:hover {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    
+    .file-name {
+        font-weight: 600;
+        color: #1e40af;
+        margin-bottom: 5px;
+    }
+    
+    .file-size {
+        color: #6b7280;
+        font-size: 14px;
+    }
+    
+    .file-icon {
+        margin-right: 10px;
+        color: #3b82f6;
+    }
+    
+    /* Progress styling */
+    .stProgress > div > div {
+        background: linear-gradient(90deg, #6366f1, #8b5cf6) !important;
+        height: 8px !important;
+        border-radius: 999px !important;
+    }
+    
+    .stProgress {
+        height: 10px;
+    }
+    
+    /* File uploader styling */
+    [data-testid="stFileUploader"] {
+        width: 100%;
+        padding: 2rem;
+        border: 2px dashed #d1d5db;
+        border-radius: 10px;
+        background-color: #f9fafb;
+        transition: all 0.3s ease;
+    }
+    
+    [data-testid="stFileUploader"]:hover {
+        border-color: #6366f1;
+        background-color: #f8fafc;
+    }
+    
+    [data-testid="stFileUploader"] > div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+    }
+    
+    /* Layout for the app */
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        margin-top: 20px;
+        padding: 0 20px;
+    }
+    
+    /* Steps Container - Styled to Match Image */
+    .steps-container {
+        width: auto;
+        display: flex;
+        justify-content: space-around;
+        padding: 20px 0;
+        background-color: #f9fafb;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin: 0 auto;
+    }
+    
+    .content-area {
+        width: 100%;
+    }
+    
+    /* Step indicators - Circular with Gradient */
+    .step-container {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 40px;
+    }
+    
+    .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        padding: 10px 15px;
+        transition: all 0.3s ease;
+    }
+    
+    .step-number {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-bottom: 8px;
+        z-index: 1;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+    
+    .step-text {
+        font-size: 14px;
+        color: #6b7280;
+        font-weight: 400;
+        text-align: center;
+    }
+    
+    .step-active .step-number {
+        transform: scale(1.1);
+    }
+    
+    .step:not(:last-child):after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translateX(-50%);
+        width: 2px;
+        height: 20px;
+        background-color: #e5e7eb;
+    }
+    
+    .step-active:not(:last-child):after {
+        background-color: #6366f1;
+    }
+    
+    /* Tooltip and help text */
+    .tooltip {
+        position: relative;
+        display: inline-block;
+        cursor: help;
+        color: #6366f1;
+        margin-left: 5px;
+    }
+    
+    .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 200px;
+        background-color: #333;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 10px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -100px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        font-size: 14px;
+    }
+    
+    .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+    }
+    
+    /* Status and action buttons */
+    .action-button {
+        background-color: #6366f1;
+        color: white;
+        font-weight: 600;
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-block;
+        text-decoration: none;
+        text-align: center;
+    }
+    
+    .action-button:hover {
+        background-color: #4f46e5;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .action-button-secondary {
+        background-color: #f3f4f6;
+        color: #4b5563;
+        border: 1px solid #d1d5db;
+    }
+    
+    .action-button-secondary:hover {
+        background-color: #e5e7eb;
+        color: #111827;
+    }
+    
+    /* Status indicators */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 9999px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+    
+    .status-ready {
+        background-color: #ecfdf5;
+        color: #065f46;
+    }
+    
+    .status-waiting {
+        background-color: #fff7ed;
+        color: #9a3412;
+    }
+    
+    .status-error {
+        background-color: #fef2f2;
+        color: #b91c1c;
+    }
+    
+    /* Add animation for processing states */
+    @keyframes pulse {
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
+    }
+    
+    .processing-pulse {
+        animation: pulse 1.5s infinite;
+        padding: 15px;
+        border-radius: 8px;
+        background-color: #f0f6ff;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        border: 1px solid #e0e7ff;
+    }
+    
+    /* Loading animation */
+    .loading-spinner {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        border: 3px solid rgba(99, 102, 241, 0.3);
+        border-radius: 50%;
+        border-top-color: #6366f1;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 10px;
+        vertical-align: middle;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    /* Hide default Streamlit elements */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .app-container {
+            flex-direction: column;
         }
         
-        [data-testid="stSidebar"] {
-            background-color: #0e1117;
-        }
-        
-        [data-testid="stHeader"] {
-            background-color: #0e1117;
-        }
-        
-        .stMarkdown {
-            color: #fafafa !important;
-        }
-        
-        /* Hide default elements */
-        [data-testid="collapsedControl"] {
-            display: none;
-        }
-        #MainMenu {
-            visibility: hidden;
-        }
-        footer {
-            visibility: hidden;
-        }
-
-        /* Base styles with dark theme */
-        .main-header {
-            background: linear-gradient(90deg, #1E88E5 0%, #1976D2 100%);
-            padding: 2rem;
-            border-radius: 10px;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-            animation: slideIn 0.5s ease;
-            width: calc(66.67% - 1rem);
-            box-sizing: border-box;
-        }
-        .main-header h1 {
-            color: white !important;
-            margin: 0 !important;
-            font-size: 2rem !important;
-            line-height: 1.2 !important;
-            margin-bottom: 0.5rem !important;
-        }
-        .main-header p {
-            color: rgba(255, 255, 255, 0.9) !important;
-            font-size: 1rem !important;
-            line-height: 1.4 !important;
-            margin-top: 1rem;
-            margin-bottom: 0;
-        }
-
-        /* Dark theme styles */
         .steps-container {
-            background: #1e1e2f;
-            padding: 1.5rem;
-            border-radius: 8px;
-            margin: 1rem 0;
-            transition: all 0.3s ease;
-            width: 100%;
-            box-sizing: border-box;
-            border: 1px solid #2d2d44;
-            color: #fafafa !important;
-        }
-        .stats-card {
-            background: #1e1e2f;
-            padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            margin-bottom: 1rem;
-            border: 1px solid #2d2d44;
-            transition: all 0.3s ease;
-            width: 100%;
-            box-sizing: border-box;
-            color: #fafafa !important;
-        }
-        .upload-section {
-            background: #1e1e2f;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            border: 2px dashed #1E88E5;
-            text-align: center;
-            margin-bottom: 2rem;
-            transition: all 0.3s ease;
-            width: 100%;
-            box-sizing: border-box;
-            color: #fafafa !important;
-        }
-
-        /* Step items styling */
-        .step-item {
-            display: flex;
-            align-items: center;
-            margin: 0.5rem 0;
-            padding: 0.8rem;
-            border-radius: 6px;
-            background: #1e1e2f;
-            border: 1px solid #2d2d44;
-            transition: all 0.2s ease;
-            color: #fafafa !important;
-        }
-        .step-item:hover {
-            background: #2a2a3d;
-            transform: translateX(5px);
-        }
-        .step-number {
-            background: #1E88E5;
-            color: white;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1rem;
-            font-size: 0.9rem;
-            font-weight: bold;
-        }
-
-        /* History items styling */
-        .history-item {
-            background: #1e1e2f;
-            border: 1px solid #2d2d44;
-            border-radius: 6px;
-            padding: 1rem;
-            margin-bottom: 0.8rem;
-            transition: all 0.2s ease;
-            color: #fafafa !important;
-        }
-        .history-item:hover {
-            background: #2a2a3d;
-            transform: translateX(5px);
-        }
-        .history-item-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-            color: #fafafa !important;
-        }
-        .history-timestamp {
-            color: #fafafa !important;
-            opacity: 0.7;
-            font-size: 0.9rem;
-        }
-        .history-item-details {
-            display: flex;
-            gap: 1rem;
-            font-size: 0.9rem;
-            color: #fafafa !important;
-            opacity: 0.9;
-        }
-
-        /* Empty state styling */
-        .empty-history {
-            text-align: center;
-            padding: 2rem;
-            color: #fafafa !important;
-            opacity: 0.7;
-        }
-        .empty-icon {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
-
-        /* Toast notifications */
-        .toast {
-            position: fixed;
-            bottom: 1rem;
-            right: 1rem;
-            padding: 1rem 2rem;
-            border-radius: 6px;
-            background: #1e1e2f;
-            border: 1px solid #2d2d44;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            animation: slideIn 0.3s ease;
-            color: #fafafa !important;
-        }
-
-        /* Info message styling */
-        .info-message {
-            background: #1e1e2f !important;
-            border: 1px solid #2d2d44 !important;
-            color: #fafafa !important;
-        }
-        .info-message h4 {
-            color: #1E88E5 !important;
-        }
-
-        /* Streamlit element overrides */
-        .stButton button {
-            width: 100%;
-            background: #1E88E5 !important;
-            color: white !important;
-            border: none !important;
-            padding: 0.5rem 1rem !important;
-            border-radius: 6px !important;
-            font-weight: 500 !important;
-            transition: all 0.2s ease !important;
-        }
-        .stButton button:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
+            padding: 10px;
         }
         
-        /* File uploader styling */
-        div[data-testid="stFileUploader"] {
-            width: 100%;
-        }
-
-        /* Upload box background */
-        div[data-testid="stFileUploader"] > section {
-            background-color: #1e1e2f !important;
-            border: 2px dashed #1E88E5 !important;
-            border-radius: 10px !important;
-            padding: 2rem !important;
-        }
-
-        /* Main upload text */
-        div[data-testid="stFileUploader"] p {
-            color: #fafafa !important;
-            font-size: 1.1rem !important;
-            font-weight: 500 !important;
-        }
-
-        /* File size limit text */
-        div[data-testid="stFileUploader"] small {
-            color: rgba(250, 250, 250, 0.7) !important;
-        }
-
-        /* Browse files button */
-        div[data-testid="stFileUploader"] button {
-            background-color: #1E88E5 !important;
-            color: white !important;
-            border: none !important;
-            padding: 0.5rem 1rem !important;
-            border-radius: 6px !important;
-            font-weight: 500 !important;
-            margin-top: 1rem !important;
-        }
-
-        /* Ensure text is visible in all states */
-        div[data-testid="stFileUploader"] * {
-            color: #fafafa !important;
-        }
-
-        /* Override Streamlit's default styles */
-        .css-1aehpvj, .css-16idsys, .css-1vbkxwb {
-            color: #fafafa !important;
-        }
-
-        /* Fix any dynamic class text colors */
-        [class*="css"] {
-            color: #fafafa !important;
-        }
-
-        /* Specific fix for the drag and drop text */
-        div[data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p {
-            color: #fafafa !important;
-        }
-
-        /* Fix for the file size text */
-        div[data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] div {
-            color: rgba(250, 250, 250, 0.7) !important;
-        }
-
-        /* Ensure the upload icon is visible */
-        div[data-testid="stFileUploader"] svg {
-            color: #1E88E5 !important;
-        }
-
-        /* Style for drag over state */
-        div[data-testid="stFileUploader"]:focus-within section {
-            border-color: #64B5F6 !important;
-            background-color: #2a2a3d !important;
-        }
-
-        /* Fix for any nested text elements */
-        div[data-testid="stFileUploader"] span,
-        div[data-testid="stFileUploader"] label,
-        div[data-testid="stFileUploader"] div {
-            color: #fafafa !important;
-        }
-
-        /* Specific override for the upload text */
-        .upload-text {
-            color: #fafafa !important;
-            font-weight: 500 !important;
-        }
-
-        /* Layout adjustments */
-        [data-testid="stHorizontalBlock"] {
-            align-items: flex-start !important;
-            gap: 2rem !important;
+        .step-container {
+            flex-direction: column;
+            gap: 20px;
         }
         
-        /* Right column adjustments */
-        [data-testid="stHorizontalBlock"] > div:nth-child(2) {
-            margin-top: -13.2rem !important;
-            padding-top: 0 !important;
+        .step {
+            padding: 10px;
         }
         
-        /* Ensure proper spacing */
-        [data-testid="stExpander"] {
-            margin-bottom: 1rem !important;
+        .file-upload-container {
+            padding: 20px 10px;
         }
+    }
+    
+    /* Hide the default Streamlit file uploader */
+    [data-testid="stFileUploader"] {
+        display: none !important;
+    }
+    
+    /* Enhanced File Uploader Styling */
+    [data-testid="stFileUploader"] {
+        width: 100%;
+    }
+    
+    [data-testid="stFileUploader"] > section {
+        padding: 2rem;
+        border: 2px dashed #d1d5db;
+        border-radius: 10px;
+        background-color: #f9fafb;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        cursor: pointer;
+    }
+    
+    [data-testid="stFileUploader"] > section:hover {
+        border-color: #6366f1;
+        background-color: #f8fafc;
+        box-shadow: 0 4px 6px rgba(99, 102, 241, 0.1);
+    }
+    
+    [data-testid="stFileUploader"] > section::before {
+        content: "📁";
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    [data-testid="stFileUploader"] > section > button {
+        background-color: #6366f1 !important;
+        border-color: #6366f1 !important;
+        color: white !important;
+        padding: 0.5rem 1.5rem !important;
+        font-weight: 600 !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    [data-testid="stFileUploader"] > section > button:hover {
+        background-color: #4f46e5 !important;
+        border-color: #4f46e5 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
+    }
+    
+    /* Enhanced Card Styling */
+    .card, .clean-card {
+        background-color: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        border: 1px solid #f0f0f0;
+        transition: all 0.3s ease;
+    }
+    
+    .card:hover {
+        box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    /* Enhanced Status Badge */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.75rem 1.25rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        gap: 0.5rem;
+    }
+    
+    .status-ready {
+        background-color: #ecfdf5;
+        color: #065f46;
+        border: 1px solid #34d399;
+    }
+    
+    .status-waiting {
+        background-color: #fff7ed;
+        color: #9a3412;
+        border: 1px solid #fb923c;
+    }
+    
+    /* Enhanced Button Styling */
+    .stButton > button {
+        width: 100%;
+        height: 3rem;
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        letter-spacing: 0.025em;
+        text-transform: uppercase;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
+        background: linear-gradient(135deg, #4f46e5, #4338ca);
+    }
+    
+    /* Enhanced File Details Card */
+    .file-details-card {
+        background: linear-gradient(to right, #f0f9ff, #e0f2fe);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin: 1.25rem 0;
+        border-left: 4px solid #0ea5e9;
+        transition: all 0.3s ease;
+    }
+    
+    .file-details-card:hover {
+        box-shadow: 0 4px 6px rgba(14, 165, 233, 0.1);
+        transform: translateX(2px);
+    }
+    
+    .file-name {
+        font-weight: 600;
+        color: #0c4a6e;
+        font-size: 1.125rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .file-size {
+        color: #64748b;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    /* Enhanced Header */
+    .title-container h1 {
+        background: linear-gradient(135deg, #1e293b, #334155);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+    }
+    
+    .title-container h2 {
+        color: #64748b;
+        font-size: 1.25rem;
+        font-weight: 500;
+    }
+    
+    /* Processing Card Animation */
+    @keyframes gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    
+    .processing-card {
+        background: linear-gradient(-45deg, #f0f9ff, #e0f2fe, #dbeafe, #eff6ff);
+        background-size: 400% 400%;
+        animation: gradient 15s ease infinite;
+        border-radius: 16px;
+        padding: 2rem;
+        margin: 1.5rem 0;
+        border: 1px solid rgba(99, 102, 241, 0.1);
+    }
+    
+    /* Processing Step Animation */
+    .processing-step {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        border-radius: 8px;
+        background-color: white;
+        margin: 0.5rem 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .processing-step.active {
+        border-left: 4px solid #6366f1;
+        background-color: #fafafa;
+        transform: translateX(5px);
+    }
+    
+    /* Spinner Animation */
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .spinner {
+        width: 24px;
+        height: 24px;
+        border: 3px solid rgba(99, 102, 241, 0.1);
+        border-radius: 50%;
+        border-top-color: #6366f1;
+        animation: spin 1s linear infinite;
+    }
+    
+    /* Enhanced Results Card */
+    .results-card {
+        background: linear-gradient(135deg, #ffffff, #f8fafc);
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(99, 102, 241, 0.1);
+    }
+    
+    /* Success Animation */
+    @keyframes success-circle {
+        from { transform: scale(0); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+    
+    .success-icon {
+        width: 64px;
+        height: 64px;
+        background: linear-gradient(135deg, #34d399, #10b981);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 32px;
+        margin: 0 auto 1.5rem;
+        animation: success-circle 0.5s ease-out;
+    }
+    
+    /* Metric Cards */
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-top: 4px solid;
+        transition: all 0.3s ease;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .metric-card.services { border-color: #6366f1; }
+    .metric-card.flows { border-color: #8b5cf6; }
+    .metric-card.success-rate { border-color: #06b6d4; }
+    .metric-card.warnings { border-color: #fb923c; }
+    
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+        background: linear-gradient(135deg, #1e293b, #334155);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    /* Download Section */
+    .download-section {
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+    }
+    
+    .download-button {
+        background: white !important;
+        color: #1f2937 !important;
+        border: 1px solid #e5e7eb !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.5rem !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .download-button:hover {
+        background: #f9fafb !important;
+        border-color: #6366f1 !important;
+        transform: translateY(-1px) !important;
+    }
+
+    /* Make file uploader more compact */
+    [data-testid="stFileUploader"] {
+        width: 100%;
+        visibility: visible !important;
+        display: block !important;
+    }
+
+    [data-testid="stFileUploader"] > section {
+        min-height: 80px !important;     /* Further reduced from 120px */
+        padding: 1rem 0.75rem !important;  /* Further reduced padding */
+        border: 1px dashed #6366f1;      /* Thinner border */
+        border-radius: 6px;              /* Smaller radius */
+        background-color: #f8fafc;
+        display: flex;
+        flex-direction: row;             /* Changed to row for more compact layout */
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    [data-testid="stFileUploader"] > section:hover {
+        border-color: #4f46e5;
+        background-color: #f0f7ff;
+        box-shadow: 0 1px 3px rgba(99, 102, 241, 0.1);  /* Even smaller shadow */
+    }
+
+    [data-testid="stFileUploader"] > section::before {
+        content: "📁";
+        font-size: 1.5rem;              /* Further reduced from 2rem */
+        margin-bottom: 0;
+        margin-right: 0.5rem;
+    }
+
+    [data-testid="stFileUploader"] > section > div {
+        font-size: 0.85rem;             /* Further reduced font size */
+        color: #4b5563;
+        text-align: center;
+    }
+
+    [data-testid="stFileUploader"] > section > button {
+        margin: 0 0.5rem !important;    /* Adjusted margins */
+        background-color: #6366f1 !important;
+        color: white !important;
+        padding: 0.35rem 0.75rem !important;  /* Smaller padding */
+        border-radius: 4px !important;        /* Smaller radius */
+        font-weight: 500 !important;          /* Slightly reduced weight */
+        font-size: 0.8rem !important;         /* Smaller font */
+        transition: all 0.3s ease !important;
+        line-height: 1 !important;            /* Tighter line height */
+    }
+
+    [data-testid="stFileUploader"] > section > button:hover {
+        background-color: #4f46e5 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 1px 2px rgba(79, 70, 229, 0.2);
+    }
+
+    /* Even smaller help text */
+    [data-testid="stFileUploader"] small {
+        font-size: 0.75rem !important;
+    }
+
+    /* Hide some elements for compactness */
+    [data-testid="stFileUploader"] > section > div > small {
+        display: none !important;
+    }
+
+    /* Enhanced Upload Area Interactions */
+    [data-testid="stFileUploader"] > section {
+        position: relative;
+        overflow: hidden;
+    }
+
+    [data-testid="stFileUploader"] > section::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 200%;
+        height: 100%;
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(99, 102, 241, 0.1),
+            transparent
+        );
+        transition: 0.5s;
+        pointer-events: none;
+    }
+
+    [data-testid="stFileUploader"] > section:hover::after {
+        left: 100%;
+    }
+
+    /* Progress Animation */
+    @keyframes progress-pulse {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    .processing-step {
+        background: linear-gradient(
+            90deg,
+            #f0f7ff,
+            #e0f2fe,
+            #f0f7ff
+        );
+        background-size: 200% 100%;
+        animation: progress-pulse 2s ease-in-out infinite;
+    }
+
+    /* Success Animation */
+    @keyframes success-scale {
+        0% { transform: scale(0.8); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    .success-message {
+        animation: success-scale 0.5s ease-out forwards;
+    }
+
+    /* Enhanced Button States */
+    .stButton > button {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stButton > button::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 300%;
+        height: 300%;
+        background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 60%);
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+        transition: 0.5s;
+    }
+
+    .stButton > button:hover::after {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+
+    /* Loading Indicator */
+    .loading-spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #6366f1;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+
+    /* Toast Notifications */
+    .toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 1rem;
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        animation: toast-slide 0.3s ease-out forwards;
+    }
+
+    @keyframes toast-slide {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+</style>
+
+<script>
+    // Add drag and drop highlight functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropArea = document.querySelector('.file-upload-container');
         
-        .stats-card {
-            margin-top: 1rem !important;
-        }
-        
-        /* Animations */
-        @keyframes slideIn {
-            from {
-                transform: translateY(-10px);
-                opacity: 0;
+        if (dropArea) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight(e) {
+                e.preventDefault();
+                dropArea.classList.add('file-drop-active');
             }
-            to {
-                transform: translateY(0);
-                opacity: 1;
+            
+            function unhighlight(e) {
+                e.preventDefault();
+                dropArea.classList.remove('file-drop-active');
             }
         }
-
-        [data-testid="stFileUploader"] label {
-            font-size: 1.1rem !important;
-            color: #fafafa !important;
-            font-weight: 500 !important;
-        }
-        [data-testid="stFileUploader"] small {
-            color: rgba(250, 250, 250, 0.7) !important;
-        }
-        [data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] {
-            color: #fafafa !important;
-        }
-
-        /* File Details Section Styling */
-        .file-details {
-            background: #1e1e2f !important;
-            border-radius: 10px !important;
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            border: 1px solid #2d2d44 !important;
-        }
-
-        /* File Details Header */
-        .file-details h3 {
-            color: #fafafa !important;
-            font-size: 1.2rem !important;
-            margin-bottom: 1rem !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 0.5rem !important;
-        }
-
-        /* File Name Styling */
-        .file-name {
-            color: #fafafa !important;
-            font-size: 1.1rem !important;
-            margin-bottom: 1rem !important;
-            font-weight: 500 !important;
-        }
-
-        /* File Properties */
-        .file-property {
-            color: #fafafa !important;
-            margin: 0.5rem 0 !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 0.5rem !important;
-        }
-
-        .file-property-label {
-            color: rgba(250, 250, 250, 0.7) !important;
-            font-weight: 500 !important;
-        }
-
-        .file-property-value {
-            color: #fafafa !important;
-        }
-
-        /* Migration Time Estimate Section */
-        .estimate-section {
-            background: #1e1e2f !important;
-            border-radius: 10px !important;
-            padding: 1.5rem !important;
-            margin: 1rem 0 !important;
-            border: 1px solid #2d2d44 !important;
-        }
-
-        .estimate-header {
-            color: #1E88E5 !important;
-            font-size: 1.2rem !important;
-            margin-bottom: 1rem !important;
-            font-weight: 500 !important;
-        }
-
-        .estimate-detail {
-            color: #fafafa !important;
-            margin: 0.5rem 0 !important;
-        }
-
-        .estimate-label {
-            color: rgba(250, 250, 250, 0.7) !important;
-            font-weight: 500 !important;
-        }
-
-        .estimate-value {
-            color: #fafafa !important;
-        }
-
-        .estimate-note {
-            color: rgba(250, 250, 250, 0.6) !important;
-            font-style: italic !important;
-            margin-top: 1rem !important;
-            font-size: 0.9rem !important;
-        }
-
-        /* Override Streamlit's default text colors in file details */
-        [data-testid="stMarkdownContainer"] p,
-        [data-testid="stMarkdownContainer"] span,
-        [data-testid="stMarkdownContainer"] div {
-            color: #fafafa !important;
-        }
-
-        /* Style for file size and other metadata */
-        .file-metadata {
-            color: rgba(250, 250, 250, 0.7) !important;
-            font-size: 0.9rem !important;
-        }
-
-        /* Ensure all text in the details section is visible */
-        div[data-testid="stFileUploader"] ~ div * {
-            color: #fafafa !important;
-        }
-
-        /* Settings Box Styling */
-        [data-testid="stExpander"] {
-            background-color: #1e1e2f !important;
-            border: 1px solid #2d2d44 !important;
-            border-radius: 10px !important;
-            margin-bottom: 1rem !important;
-        }
-
-        /* Settings Header */
-        [data-testid="stExpander"] details summary {
-            padding: 1rem !important;
-            background-color: #1e1e2f !important;
-            border-radius: 10px !important;
-            color: #fafafa !important;
-            font-weight: 500 !important;
-            font-size: 1.1rem !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 0.5rem !important;
-        }
-
-        /* Settings Content */
-        [data-testid="stExpander"] details div[data-testid="stExpanderContent"] {
-            background-color: #1e1e2f !important;
-            border-top: 1px solid #2d2d44 !important;
-            padding: 1rem !important;
-            color: #fafafa !important;
-        }
-
-        /* Settings Icon */
-        [data-testid="stExpander"] svg {
-            color: #1E88E5 !important;
-        }
-
-        /* Settings Text */
-        [data-testid="stExpander"] p,
-        [data-testid="stExpander"] span,
-        [data-testid="stExpander"] div {
-            color: #fafafa !important;
-        }
-
-        /* Settings Hover Effect */
-        [data-testid="stExpander"] details summary:hover {
-            background-color: #2a2a3d !important;
-            cursor: pointer;
-        }
-
-        /* Settings Arrow Icon */
-        [data-testid="stExpander"] details summary::-webkit-details-marker,
-        [data-testid="stExpander"] details summary::marker {
-            color: #1E88E5 !important;
-        }
-
-        /* No Settings Message */
-        [data-testid="stExpander"] .no-settings {
-            color: rgba(250, 250, 250, 0.7) !important;
-            font-style: italic !important;
-            text-align: center !important;
-            padding: 1rem !important;
-        }
-
-        /* Settings Divider */
-        [data-testid="stExpander"] hr {
-            border-color: #2d2d44 !important;
-            margin: 1rem 0 !important;
-        }
-
-        /* Make sure the expander text is visible */
-        .streamlit-expanderHeader {
-            color: #fafafa !important;
-            background-color: #1e1e2f !important;
-            font-weight: 500 !important;
-        }
-
-        /* Override any Streamlit default colors */
-        div[class*="stMarkdown"] > div[data-testid="stExpanderContent"] p {
-            color: #fafafa !important;
-        }
-    </style>
+    });
+</script>
 """, unsafe_allow_html=True)
 
-# Initialize migration estimator
-estimator = MigrationEstimator()
-
-# Get secrets with error handling
-try:
-    SNAPLOGIC_URL = st.secrets["SNAPLOGIC_URL"]
-    SNAPLOGIC_BEARER_TOKEN = st.secrets["SNAPLOGIC_BEARER_TOKEN"]
-except Exception as e:
-    show_error_message(
-        "Configuration Error: Missing required secrets.",
-        """Please ensure you have set up the following in your .streamlit/secrets.toml file:
-        
-        SNAPLOGIC_URL = "your-url-here"
-        SNAPLOGIC_BEARER_TOKEN = "your-token-here"
-        
-        For deployment: Add these values in the app's "Advanced settings" section."""
-    )
-    st.stop()
-
-# File to store migration history locally
-HISTORY_FILE = "migration_history.json"
-
-# Function to format timestamp
-def format_timestamp(timestamp_str):
-    try:
-        timestamp = datetime.fromisoformat(timestamp_str)
-        return timestamp.strftime("%Y-%m-%d %H:%M")
-    except:
-        return "N/A"
-
-# Function to load migration history from file
-def load_history():
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, 'r') as file:
-            return json.load(file)
-    return []
-
-# Function to save migration history to file
-def save_history(history):
-    with open(HISTORY_FILE, 'w') as file:
-        json.dump(history, file)
-
-# Initialize session state variables
-if 'migration_history' not in st.session_state:
-    st.session_state['migration_history'] = load_history()
-if 'current_migration' not in st.session_state:
-    st.session_state['current_migration'] = None
-if 'upload_key' not in st.session_state:
-    st.session_state['upload_key'] = 0
-
-def reset_upload():
-    """Reset the file uploader by incrementing the key"""
-    st.session_state['upload_key'] += 1
-
-# Main page header with animation and improved styling
-st.markdown("""
-<div class="main-header">
-    <h1>webMethods to SnapLogic Migration Tool</h1>
-    <p>Welcome to the webMethods to SnapLogic Migration Tool! This application helps you migrate your integration projects 
-    from webMethods to SnapLogic seamlessly.</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Create two columns with different ratios (2:1 for left:right)
-col_left, col_right = st.columns([2, 1])
-
-# Left column - How it works and Upload section
-with col_left:
-    # Steps section with improved styling
-    st.markdown("""
-    <div class="steps-container">
-        <h3>🔄 How it works:</h3>
-        <div class="step-item">
-            <div class="step-number">1</div>
-            <div><strong>Upload your webMethods project</strong> as a ZIP file</div>
-        </div>
-        <div class="step-item">
-            <div class="step-number">2</div>
-            <div><strong>Review</strong> the file details and project name</div>
-        </div>
-        <div class="step-item">
-            <div class="step-number">3</div>
-            <div>Click the <strong>Migrate</strong> button to start the migration process</div>
-        </div>
-        <div class="step-item">
-            <div class="step-number">4</div>
-            <div><strong>Monitor</strong> the migration progress</div>
-        </div>
-        <div class="step-item">
-            <div class="step-number">5</div>
-            <div><strong>View</strong> the migration results</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+def main():
+    # Logo and title in the header
+    col1, col2 = st.columns([1, 5])
     
-    # Upload section
-    uploaded_file = st.file_uploader(
-        label="Upload your webMethods project ZIP file",
-        type="zip",
-        key=f"project_uploader_{st.session_state['upload_key']}",
-        help="Upload a ZIP file containing your webMethods project artifacts.",
-        on_change=None
-    )
+    with col1:
+        # Logo on the left
+        try:
+            logo = Image.open("logo.png")
+            st.image(logo, width=150)
+        except Exception as e:
+            # Fallback to inline SVG if logo file is not found
+            svg_code = """
+            <svg width="150" height="70" viewBox="0 0 200 70">
+                <rect x="20" y="15" width="40" height="40" fill="#E11D48"/>
+                <text x="70" y="40" font-family="Arial" font-size="26" font-weight="bold" fill="#333">IW Connect</text>
+            </svg>
+            """
+            st.markdown(svg_code, unsafe_allow_html=True)
     
-    # Show file preview and time estimate if a file is uploaded
-    if uploaded_file is not None:
-        # File Details Section
+    with col2:
+        # Title and subtitle
         st.markdown("""
-            <div class="file-details">
-                <h3>📁 File Details</h3>
-                <div class="file-name">{}</div>
-                <div class="file-property">
-                    <span class="file-property-label">Size:</span>
-                    <span class="file-property-value">{:.2f} MB</span>
-                </div>
-            </div>
-        """.format(
-            uploaded_file.name,
-            uploaded_file.size / (1024 * 1024)
-        ), unsafe_allow_html=True)
-        
-        # Calculate and show time estimate
-        file_size_mb = uploaded_file.size / (1024 * 1024)
-        estimated_time, estimate_details = estimator.estimate_migration_time(file_size_mb)
-        
-        # Show time estimate with confidence level
-        st.markdown("""
-            <div class="estimate-section">
-                <div class="estimate-header">⏱️ Migration Time Estimate</div>
-                <div class="estimate-detail">
-                    <span class="estimate-label">Estimated Duration:</span>
-                    <span class="estimate-value">{}</span>
-                </div>
-                <div class="estimate-detail">
-                    <span class="estimate-label">Confidence Level:</span>
-                    <span class="estimate-value">{}</span>
-                </div>
-                <div class="estimate-detail">
-                    <span class="estimate-label">File Size:</span>
-                    <span class="estimate-value">{:.2f} MB</span>
-                </div>
-                <div class="estimate-detail">
-                    <span class="estimate-label">Complexity:</span>
-                    <span class="estimate-value">{}</span>
-                </div>
-                <div class="estimate-note">{}</div>
-                {}
-                {}
-            </div>
-        """.format(
-            estimator.format_time_estimate(estimated_time),
-            estimate_details['confidence'].title(),
-            file_size_mb,
-            estimate_details['complexity'].title(),
-            estimate_details['explanation'],
-            f'<div class="estimate-note">Note: {estimate_details["note"]}</div>' if 'note' in estimate_details else '',
-            f'<div class="estimate-detail"><span class="estimate-label">Similar Files Range:</span> <span class="estimate-value">{estimate_details["similar_sizes_range"]}</span></div>' if 'similar_sizes_range' in estimate_details else ''
-        ), unsafe_allow_html=True)
-        
-        # Add clear button with proper styling
-        if st.button("Clear File", key="clear_file", help="Click to remove the current file"):
-            reset_upload()
-            st.rerun()
-        
-        # Migrate button with proper styling
-        migrate_button = st.button(
-            "🚀 Start Migration",
-            type="primary",
-            key="migrate_button",
-            help="Click to start the migration process",
-            use_container_width=True
-        )
-        
-        if migrate_button:
-            # Validate file before proceeding
-            if not handle_file_validation(uploaded_file):
-                st.stop()
-
-            # Extract and validate project name
-            project_name = uploaded_file.name.replace(".zip", "")
-            if not project_name:
-                show_error_message("Invalid project name. The ZIP file name cannot be empty.")
-                st.stop()
-
-            # Update current migration status
-            start_time = time.time()
-            st.session_state['current_migration'] = {
-                'name': project_name,
-                'status': 'in_progress',
-                'start_time': start_time
-            }
-
-            # Show animated progress bar and status
-            show_migration_status(project_name, "in_progress")
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            try:
-                # Send the request to the SnapLogic API with shorter timeout
-                with st.spinner(""):
-                    # Initial progress
-                    status_text.text("Initiating migration...")
-                    progress_bar.progress(0.1)
-                    time.sleep(0.5)  # Small delay for visual feedback
-                    
-                    # Simulate progress during API request
-                    for i in range(1, 9):
-                        progress_bar.progress(0.1 + (i * 0.1))
-                        time.sleep(0.2)  # Small delay between updates
-                    
-                    response = requests.post(
-                        SNAPLOGIC_URL,
-                        headers={
-                            "Authorization": f"Bearer {SNAPLOGIC_BEARER_TOKEN}",
-                            "Content-Type": "application/octet-stream",
-                        },
-                        params={"projectName": project_name},
-                        data=uploaded_file.getvalue(),
-                    )
-                    
-                    # Final progress updates
-                    progress_bar.progress(0.9)
-                    status_text.text("Finalizing migration...")
-                    time.sleep(0.5)  # Small delay for visual feedback
-                    progress_bar.progress(1.0)
-                
-                # Calculate actual duration
-                duration = time.time() - start_time
-                
-                if response.status_code == 200:
-                    show_toast("Migration completed successfully! 🎉", "success")
-                    show_success_message(
-                        "Migration completed successfully! 🎉",
-                        response.json()
-                    )
-                    
-                    # Update migration history
-                    st.session_state['migration_history'].append(project_name)
-                    save_history(st.session_state['migration_history'])
-                    
-                    # Add migration record
-                    estimator.add_migration_record(project_name, file_size_mb, duration)
-                    
-                    # Update status and reset upload
-                    st.session_state['current_migration']['status'] = 'completed'
-                    reset_upload()
-                    st.rerun()
-                else:
-                    show_toast("Migration failed. Please check the error details.", "error")
-                    status_text.text("Migration failed. Please check the error details.")
-                    handle_api_error(response)
-                    st.session_state['current_migration']['status'] = 'failed'
-                    
-            except requests.exceptions.RequestException as e:
-                progress_bar.empty()
-                status_text.text("Network error occurred. Please check your connection.")
-                handle_network_error(e)
-                st.session_state['current_migration']['status'] = 'failed'
-            except Exception as e:
-                progress_bar.empty()
-                status_text.text("An unexpected error occurred.")
-                handle_migration_error(MigrationError(
-                    "An unexpected error occurred during migration",
-                    {"error": str(e)}
-                ))
-                st.session_state['current_migration']['status'] = 'failed'
-
-# Right column - Settings, Statistics, and History
-with col_right:
-    # Settings expander (removed dark mode toggle)
-    with st.expander("⚙️ Settings", expanded=False):
-        st.markdown("No settings available")
-
-    # Statistics section
-    stats = estimator.get_migration_statistics()
-    if stats["total_migrations"] > 0:
-        st.markdown("""
-        <div class="stats-card">
-            <h3>📊 Migration Statistics</h3>
-            <div class="stat-item">
-                <span>📈 Total Migrations</span>
-                <strong>{}</strong>
-            </div>
-            <div class="stat-item">
-                <span>⏱️ Average Time</span>
-                <strong>{}</strong>
-            </div>
-            <div class="stat-item">
-                <span>📦 Average Size</span>
-                <strong>{:.2f} MB</strong>
-            </div>
-            <div class="stat-item">
-                <span>⌛ Median Time</span>
-                <strong>{}</strong>
-            </div>
-            <div class="stat-item">
-                <span>💾 Median Size</span>
-                <strong>{:.2f} MB</strong>
-            </div>
-        </div>
-        """.format(
-            stats['total_migrations'],
-            estimator.format_time_estimate(stats['average_time']),
-            stats['average_size'],
-            estimator.format_time_estimate(stats['median_time']),
-            stats['median_size']
-        ), unsafe_allow_html=True)
-    
-    # Migration history
-    st.markdown("""
-    <div class="stats-card">
-        <h3>📋 Migration History</h3>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    if st.session_state['migration_history']:
-        # Get detailed history from estimator
-        detailed_history = estimator.size_time_data
-        
-        for project in reversed(detailed_history):
-            timestamp = format_timestamp(project.get('timestamp', ''))
-            file_size = project.get('file_size_mb', 0)
-            duration = project.get('duration_seconds', 0)
-            
-            st.markdown(f"""
-            <div class="history-item">
-                <div class="history-item-content">
-                    <div class="history-item-header">
-                        <strong>{project['project_name']}</strong>
-                        <span class="history-timestamp">{timestamp}</span>
-                    </div>
-                    <div class="history-item-details">
-                        <span>📦 {file_size:.2f} MB</span>
-                        <span>⏱️ {estimator.format_time_estimate(duration)}</span>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div class="empty-history">
-            <div class="empty-icon">📋</div>
-            <p>No migrations yet</p>
-            <span>Your migration history will appear here</span>
+        <div class="title-container">
+            <h1 style="font-size: 30px; margin-top: 10px;">Web Methods to SnapLogic</h1>
+            <h2 style="font-size: 20px; margin-top: 0px;">Migration Accelerator</h2>
         </div>
         """, unsafe_allow_html=True)
 
-# Current migration status
-if st.session_state['current_migration']:
-    migration = st.session_state['current_migration']
-    show_migration_status(migration['name'], migration['status'])
+    # Initialize step tracking
+    if 'step' not in st.session_state:
+        st.session_state.step = 1
     
-    if migration['status'] == 'completed':
-        duration = time.time() - migration['start_time']
-        st.metric("⏱️ Migration Duration", f"{duration:.1f} seconds")
+    # Create app container
+    st.markdown('<div class="app-container">', unsafe_allow_html=True)
+    
+    # Main content area
+    st.markdown('<div class="content-area">', unsafe_allow_html=True)
+    
+    # File upload section first - BEFORE we use the variable
+    st.subheader("📤 Upload your Web Methods package")
+    st.markdown("""
+    <div style="margin-bottom: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <h3 style="font-size: 1rem; color: #374151; margin: 0;">📤 Upload Package</h3>
+            <div style="background: #e0f2fe; color: #0369a1; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 9999px;">
+                ZIP files only
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        /* Modern file uploader styling */
+        [data-testid="stFileUploader"] {
+            width: 100%;
+            visibility: visible !important;
+            display: block !important;
+        }
 
-# Add toast notification function
-def show_toast(message: str, type: str = "info"):
-    """Show a toast notification"""
-    st.markdown(f"""
-    <div class="toast {type}">
-        {message}
+        [data-testid="stFileUploader"] > section {
+            min-height: 80px !important;
+            padding: 1rem !important;
+            border: 1px dashed #6366f1;
+            border-radius: 8px;
+            background-color: #f8fafc;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        [data-testid="stFileUploader"] > section:hover {
+            border-color: #4f46e5;
+            background-color: #f0f7ff;
+            box-shadow: 0 1px 3px rgba(99, 102, 241, 0.1);
+        }
+
+        /* File details card styling */
+        .file-info-card {
+            background: linear-gradient(to right, #f0f9ff, #e0f2fe);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            border: 1px solid #e0f2fe;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-info-card .file-details {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .file-info-card .file-icon {
+            color: #3b82f6;
+            font-size: 1.25rem;
+        }
+
+        .file-info-card .file-name {
+            color: #1e40af;
+            font-weight: 500;
+        }
+
+        .file-info-card .file-size {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        .file-info-card .status-badge {
+            background: #ecfdf5;
+            color: #065f46;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* Start Migration button styling */
+        .migration-button {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 2px 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .migration-button:hover {
+            background: linear-gradient(135deg, #4f46e5, #4338ca);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(99, 102, 241, 0.2);
+        }
+
+        .ready-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .ready-indicator .dot {
+            width: 8px;
+            height: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Initialize file uploader
+    uploaded_file = st.file_uploader(
+        "Drop ZIP file here",
+        type="zip",
+        help="Maximum size: 200MB",
+        key="file_uploader"
+    )
+
+    # Initialize start_button variable
+    start_button = False
+
+    # Show file details if uploaded
+    if uploaded_file:
+        size_kb = uploaded_file.size / 1024
+        size_text = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb/1024:.2f} MB"
+        
+        st.markdown(f"""
+        <div class="file-info-card">
+            <div class="file-details">
+                <span class="file-icon">📄</span>
+                <div>
+                    <div class="file-name">{uploaded_file.name}</div>
+                    <div class="file-size">Size: {size_text}</div>
+                </div>
+            </div>
+            <div class="status-badge">Ready ✓</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Start Migration button
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            start_button = st.button(
+                "⚡ Start Migration",
+                key="start_migration",
+                help="Begin the migration process",
+                disabled=st.session_state.is_migrating
+            )
+        
+        with col2:
+            if not st.session_state.is_migrating:
+                st.markdown("""
+                <div class="ready-indicator">
+                    <span class="dot"></span>
+                    Ready to start the migration process
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div class="ready-indicator">
+                    <div style="
+                        width: 8px;
+                        height: 8px;
+                        border: 2px solid #3b82f6;
+                        border-top-color: transparent;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    "></div>
+                    Migration in progress...
+                </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div style="background: #f8fafc; border-radius: 6px; padding: 0.75rem; margin: 0.5rem 0;">
+            <div style="color: #6b7280; font-size: 0.75rem; margin-bottom: 0.5rem;">Quick Guide:</div>
+            <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.75rem; color: #4b5563;">
+                <div>1. 📋 Prepare ZIP file</div>
+                <div>2. 📥 Drop or browse</div>
+                <div>3. ✨ Start migration</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)  # Close card
+    
+    # Results section - only shown when processing is complete
+    if start_button:
+        # Set migration as started
+        st.session_state.is_migrating = True
+        st.rerun()
+
+    if st.session_state.is_migrating:
+        # Validate the uploaded file
+        is_valid, error_message = api_helpers.validate_file(uploaded_file)
+        
+        if not is_valid:
+            st.session_state.is_migrating = False
+            st.markdown(f"""
+            <div class="card">
+                <div class="status-badge status-error">
+                    ❌ Validation Error
+                </div>
+                <p style="margin-top: 15px; color: #b91c1c;">{error_message}</p>
+                <button class="action-button action-button-secondary" onclick="window.location.reload()">
+                    Try Again
+                </button>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            # Create a card for the processing section
+            processing_header = st.empty()
+            processing_header.subheader("🔄 Processing Migration")
+            
+            # Create single progress bar and time container
+            progress_bar = st.progress(0)
+            time_container = st.empty()
+            status_container = st.empty()
+            
+            # Prepare the data for API
+            migration_options = {
+                "include_documentation": True,
+                "generate_mappings": True,
+                "convert_transformations": True,
+                "analyze_dependencies": True
+            }
+            
+            # Define the processing steps with their progress percentages
+            detailed_steps = [
+                (5, "Validating package structure..."),
+                (10, "Establishing secure connection to SnapLogic..."),
+                (15, "Extracting Web Methods components..."),
+                (25, "Processing service definitions..."),
+                (35, "Mapping data structures..."),
+                (45, "Processing flow logic..."),
+                (55, "Creating pipeline structure..."),
+                (65, "Processing business rules..."),
+                (75, "Validating transformed components..."),
+                (85, "Creating component mappings..."),
+                (95, "Finalizing conversion...")
+            ]
+            
+            try:
+                # Start time
+                start_time = time.time()
+                
+                # Process each step
+                for progress, message in detailed_steps:
+                    # Update progress
+                    progress_bar.progress(progress)
+                    
+                    # Calculate elapsed time
+                    elapsed_time = int(time.time() - start_time)
+                    
+                    # Update status with animation
+                    status_container.markdown(f"""
+                    <div style="padding: 1rem; border-radius: 8px; background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(8px); border: 1px solid rgba(59, 130, 246, 0.1);">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div style="position: relative; width: 24px; height: 24px;">
+                                <style>
+                                    @keyframes spin {{
+                                        0%% {{ transform: rotate(0deg); }}
+                                        100%% {{ transform: rotate(360deg); }}
+                                    }}
+                                    @keyframes pulse {{
+                                        0%%, 100%% {{ opacity: 1; }}
+                                        50%% {{ opacity: 0.5; }}
+                                    }}
+                                </style>
+                                <div style="
+                                    position: absolute;
+                                    width: 24px;
+                                    height: 24px;
+                                    border: 3px solid #e0e7ff;
+                                    border-top: 3px solid #6366f1;
+                                    border-radius: 50%%;
+                                    animation: spin 1s linear infinite;
+                                "></div>
+                            </div>
+                            <div style="flex-grow: 1;">
+                                <div style="
+                                    color: #1e40af;
+                                    font-weight: 500;
+                                    margin-bottom: 0.25rem;
+                                    animation: pulse 2s ease-in-out infinite;
+                                ">{message}</div>
+                                <div class="progress-details" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="color: #3b82f6; font-size: 0.875rem;">Progress: {progress}%</div>
+                                    <div style="
+                                        background: rgba(255, 255, 255, 0.8);
+                                        color: #3b82f6;
+                                        padding: 0.25rem 0.75rem;
+                                        border-radius: 9999px;
+                                        font-size: 0.75rem;
+                                        font-weight: 500;
+                                        backdrop-filter: blur(4px);
+                                    ">Migration in Progress</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Update time display
+                    time_container.markdown(f"""
+                    <div style="
+                        text-align: right;
+                        color: #3b82f6;
+                        font-size: 0.875rem;
+                        animation: pulse 2s ease-in-out infinite;
+                    ">
+                        Time elapsed: {elapsed_time // 60}m {elapsed_time % 60}s
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Simulate processing time (adjust as needed)
+                    time.sleep(0.5)
+                
+                # Show completion with success animation
+                progress_bar.progress(100)
+                status_container.markdown("""
+                <div style="padding: 1.5rem; border-radius: 8px; background: #f0f7ff; border-left: 3px solid #3b82f6;">
+                    <style>
+                        @keyframes slideIn {
+                            from { transform: translateX(-10px); opacity: 0; }
+                            to { transform: translateX(0); opacity: 1; }
+                        }
+                        @keyframes pulse {
+                            0% { transform: scale(1); }
+                            50% { transform: scale(1.05); }
+                            100% { transform: scale(1); }
+                        }
+                        @keyframes dots {
+                            0%, 20% { content: ""; }
+                            40% { content: "."; }
+                            60% { content: ".."; }
+                            80%, 100% { content: "..."; }
+                        }
+                        .loading-dots::after {
+                            content: "";
+                            animation: dots 1.5s infinite;
+                        }
+                    </style>
+                    <div style="display: flex; align-items: center; gap: 1rem; animation: slideIn 0.5s ease-out;">
+                        <div style="
+                            background: #60a5fa;
+                            border-radius: 50%;
+                            width: 32px;
+                            height: 32px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            animation: pulse 2s ease-in-out infinite;
+                        ">
+                            <div style="
+                                width: 16px;
+                                height: 16px;
+                                border: 3px solid #ffffff;
+                                border-top-color: transparent;
+                                border-radius: 50%;
+                                animation: spin 1s linear infinite;
+                            "></div>
+                        </div>
+                        <div>
+                            <div style="
+                                color: #1e40af;
+                                font-weight: 500;
+                                font-size: 1.125rem;
+                                margin-bottom: 0.25rem;
+                                display: flex;
+                                align-items: center;
+                            ">
+                                Migration in Progress<span class="loading-dots"></span>
+                            </div>
+                            <div style="
+                                color: #3b82f6;
+                                font-size: 0.875rem;
+                                display: flex;
+                                align-items: center;
+                                gap: 0.5rem;
+                            ">
+                                <span>Transferring components to SnapLogic</span>
+                                <div style="
+                                    width: 12px;
+                                    height: 12px;
+                                    border: 2px solid #3b82f6;
+                                    border-top-color: transparent;
+                                    border-radius: 50%;
+                                    animation: spin 1s linear infinite;
+                                "></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Start the API call and handle response
+                result = api_helpers.send_to_api(uploaded_file, migration_options)
+                
+                # Handle the API response
+                if result.get("success"):
+                    # Reset migration status
+                    st.session_state.is_migrating = False
+                    
+                    # Clear previous progress messages but keep the time
+                    status_container.empty()
+                    progress_bar.empty()
+                    processing_header.empty()
+                    
+                    # Final time update
+                    elapsed_time = int(time.time() - start_time)
+                    time_container.markdown(f"""
+                    <div style="
+                        text-align: right;
+                        color: #3b82f6;
+                        font-size: 0.875rem;
+                    ">
+                        Total time: {elapsed_time // 60}m {elapsed_time % 60}s
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Show success message with modern styling
+                    st.markdown("""
+                    <div style="margin-top: 2rem;">
+                        <div style="background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="background: #34d399; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                    <span style="color: white; font-size: 24px;">✓</span>
+                                </div>
+                                <div>
+                                    <h3 style="color: #065f46; margin: 0; font-size: 1.25rem;">Migration Successful!</h3>
+                                    <p style="color: #047857; margin: 0.5rem 0 0 0; font-size: 0.875rem;">
+                                        Your Web Methods package has been successfully migrated to SnapLogic.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    # Reset migration status on error
+                    st.session_state.is_migrating = False
+                    # Clear previous progress messages
+                    status_container.empty()
+                    time_container.empty()
+                    progress_bar.empty()
+                    
+                    # Show error message if the API call was not successful
+                    error_message = result.get("error", "An unknown error occurred")
+                    st.markdown(f"""
+                    <div style="margin-top: 2rem;">
+                        <div style="background: #fef2f2; border: 1px solid #ef4444; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="background: #ef4444; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                    <span style="color: white; font-size: 24px;">×</span>
+                                </div>
+                                <div>
+                                    <h3 style="color: #991b1b; margin: 0; font-size: 1.25rem;">Migration Failed</h3>
+                                    <p style="color: #b91c1c; margin: 0.5rem 0 0 0; font-size: 0.875rem;">
+                                        {error_message}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            except Exception as e:
+                # Reset migration status on error
+                st.session_state.is_migrating = False
+                st.error(f"An error occurred: {str(e)}")
+                st.button("Try Again", on_click=lambda: st.session_state.clear())
+            
+            st.markdown('</div>', unsafe_allow_html=True)  # Close processing card
+    
+    st.markdown('</div>', unsafe_allow_html=True)  # close content area
+    
+    st.markdown('</div>', unsafe_allow_html=True)  # close app container
+    
+    # A sleeker footer
+    st.markdown("""
+    <div style="text-align: center; padding-top: 20px; margin-top: 30px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.9rem;">
+        © 2023 IW Connect • Web Methods to SnapLogic Migration Accelerator • v1.0
     </div>
     """, unsafe_allow_html=True)
+
+def estimate_remaining_time(progress, elapsed_time):
+    if progress > 0:
+        total_estimated = (elapsed_time / progress) * 100
+        remaining = total_estimated - elapsed_time
+        return f"Estimated time remaining: {int(remaining)}s"
+    return "Calculating..."
+
+def send_to_api_with_retry(uploaded_file, migration_options, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            result = api_helpers.send_to_api(uploaded_file, migration_options)
+            if result.get("success"):
+                return result
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(2 ** attempt)  # Exponential backoff
+    return {"success": False, "error": "Maximum retries reached"}
+
+# Cache API responses
+@st.cache_data(ttl=3600)  # Cache for 1 hour
+def get_cached_api_response(file_hash):
+    return cached_responses.get(file_hash)
+
+if __name__ == "__main__":
+    main() 
