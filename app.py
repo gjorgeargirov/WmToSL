@@ -116,6 +116,45 @@ st.markdown("""
             visibility: visible !important;
             margin-top: 0.25rem !important;
         }
+        
+        /* Uploaded file name styling */
+        [data-testid="stFileUploader"] p {
+            color: #1e40af !important;
+            visibility: visible !important;
+            font-size: 0.875rem !important;
+            margin: 0.5rem 0 !important;
+        }
+        
+        /* File info styling */
+        [data-testid="stFileUploader"] .uploaded-file {
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            color: #1e40af !important;
+            visibility: visible !important;
+        }
+        
+        [data-testid="stFileUploader"] .file-size {
+            color: #6b7280 !important;
+            font-size: 0.75rem !important;
+            visibility: visible !important;
+        }
+        
+        /* Make all text in file uploader visible */
+        [data-testid="stFileUploader"] * {
+            visibility: visible !important;
+            color: inherit !important;
+        }
+        
+        /* Ensure file info is visible */
+        .uploadedFile {
+            color: #1e40af !important;
+            visibility: visible !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            margin: 0.5rem 0 !important;
+        }
     </style>
 """, unsafe_allow_html=True)
 
