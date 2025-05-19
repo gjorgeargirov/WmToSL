@@ -16,27 +16,69 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Hide Streamlit elements and force light theme
+# Hide Streamlit elements and ensure text visibility
 st.markdown("""
     <style>
         /* Hide Streamlit elements */
         #MainMenu {visibility: hidden;}
         header {visibility: hidden;}
         footer {visibility: hidden;}
-        
-        /* Hide top header bar */
         [data-testid="stHeader"] {
             display: none !important;
         }
         
-        /* Remove top padding since header is hidden */
-        .main > div {
+        /* Fix title and text visibility */
+        .main .block-container {
             padding-top: 2rem;
+            padding-bottom: 0rem;
+        }
+        
+        h1, h2, h3, .stMarkdown, .stText {
+            color: #111827 !important;
+            visibility: visible !important;
+            display: block !important;
+        }
+        
+        /* Style the main title */
+        .title-container h1 {
+            color: #1e293b !important;
+            font-size: 30px !important;
+            font-weight: 600 !important;
+            margin-bottom: 8px !important;
+            line-height: 1.2 !important;
+            visibility: visible !important;
+        }
+        
+        .title-container h2 {
+            color: #64748b !important;
+            font-size: 20px !important;
+            font-weight: 400 !important;
+            margin-top: 0 !important;
+            visibility: visible !important;
+        }
+        
+        /* Ensure upload section titles are visible */
+        [data-testid="stFileUploader"] label {
+            color: #374151 !important;
+            visibility: visible !important;
+        }
+        
+        /* Quick Guide text */
+        .quick-guide {
+            color: #6b7280 !important;
+            font-size: 0.875rem !important;
+            visibility: visible !important;
         }
         
         /* Ensure white background */
         .stApp {
             background: white;
+        }
+        
+        /* Make all text elements explicitly visible */
+        div[data-testid="stMarkdown"] > * {
+            visibility: visible !important;
+            color: inherit !important;
         }
     </style>
 """, unsafe_allow_html=True)
