@@ -82,78 +82,69 @@ st.markdown("""
         }
         
         /* File uploader styling */
-        [data-testid="stFileUploader"] {
-            width: 100%;
+        [data-testid="stFileUploader"] section {
+            padding: 1rem !important;
+            border: 1px dashed #6366f1 !important;
+            border-radius: 8px !important;
         }
         
-        [data-testid="stFileUploader"] > section {
-            padding: 1rem;
-            border: 1px dashed #6366f1;
-            border-radius: 8px;
-        }
-        
-        /* Make file uploader text visible */
-        [data-testid="stFileUploader"] > section > div {
+        /* Make all file uploader text visible */
+        [data-testid="stFileUploader"] span {
             color: #6b7280 !important;
             visibility: visible !important;
         }
         
-        [data-testid="stFileUploader"] small {
-            color: #6b7280 !important;
-            visibility: visible !important;
-            display: block !important;
+        /* Style for uploaded files list */
+        [data-testid="stFileUploader"] ul {
+            list-style: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
         }
         
-        [data-testid="stFileUploader"] .drag-text {
-            color: #4b5563 !important;
-            visibility: visible !important;
-        }
-        
-        /* File size limit text */
-        [data-testid="stFileUploader"] .upload-text {
-            color: #6b7280 !important;
-            font-size: 0.875rem !important;
-            visibility: visible !important;
-            margin-top: 0.25rem !important;
-        }
-        
-        /* Uploaded file name styling */
-        [data-testid="stFileUploader"] p {
+        /* Style for each uploaded file */
+        [data-testid="stFileUploader"] li {
             color: #1e40af !important;
             visibility: visible !important;
-            font-size: 0.875rem !important;
-            margin: 0.5rem 0 !important;
-        }
-        
-        /* File info styling */
-        [data-testid="stFileUploader"] .uploaded-file {
             display: flex !important;
             align-items: center !important;
             gap: 0.5rem !important;
+            padding: 0.5rem 0 !important;
+        }
+        
+        /* File name and size text */
+        [data-testid="stFileUploader"] li p {
+            color: #1e40af !important;
+            visibility: visible !important;
+            margin: 0 !important;
+        }
+        
+        /* File size text */
+        [data-testid="stFileUploader"] li small {
+            color: #6b7280 !important;
+            visibility: visible !important;
+        }
+        
+        /* Make sure the file info is always visible */
+        .uploadedFile, .uploadedFileName {
             color: #1e40af !important;
             visibility: visible !important;
         }
         
-        [data-testid="stFileUploader"] .file-size {
+        /* Ensure file size is visible */
+        .uploadedFileInfo, .file-size {
             color: #6b7280 !important;
-            font-size: 0.75rem !important;
             visibility: visible !important;
         }
         
-        /* Make all text in file uploader visible */
+        /* Style the drag and drop text */
+        .drag-text, .upload-text {
+            color: #6b7280 !important;
+            visibility: visible !important;
+        }
+        
+        /* Make sure all text in the uploader is visible */
         [data-testid="stFileUploader"] * {
             visibility: visible !important;
-            color: inherit !important;
-        }
-        
-        /* Ensure file info is visible */
-        .uploadedFile {
-            color: #1e40af !important;
-            visibility: visible !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 0.5rem !important;
-            margin: 0.5rem 0 !important;
         }
     </style>
 """, unsafe_allow_html=True)
