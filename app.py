@@ -16,33 +16,27 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Force light theme and disable theme customization
+# Hide Streamlit elements and force light theme
 st.markdown("""
     <style>
-        /* Force light theme */
-        [data-testid="stAppViewContainer"] {
-            background-color: white;
+        /* Hide Streamlit elements */
+        #MainMenu {visibility: hidden;}
+        header {visibility: hidden;}
+        footer {visibility: hidden;}
+        
+        /* Hide top header bar */
+        [data-testid="stHeader"] {
+            display: none !important;
         }
         
-        /* Hide theme customization */
-        [data-testid="collapsedControl"] { display: none; }
-        #MainMenu { display: none; }
-        header { display: none; }
-        footer { display: none; }
-        
-        /* Override any dark theme colors */
-        .stMarkdown, .stText {
-            color: #111827 !important;
+        /* Remove top padding since header is hidden */
+        .main > div {
+            padding-top: 2rem;
         }
         
-        /* Ensure buttons have consistent colors */
-        .stButton > button {
-            color: white !important;
-        }
-        
-        /* Progress bar color */
-        .stProgress > div > div {
-            background: linear-gradient(to right, #6366f1, #4f46e5);
+        /* Ensure white background */
+        .stApp {
+            background: white;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -499,10 +493,6 @@ st.markdown("""
     @keyframes spin {
         to { transform: rotate(360deg); }
     }
-    
-    /* Hide default Streamlit elements */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
     
     /* Responsive Design */
     @media (max-width: 768px) {
