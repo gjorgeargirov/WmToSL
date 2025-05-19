@@ -94,6 +94,27 @@ st.markdown("""
             visibility: visible !important;
         }
         
+        /* Make file size limit text visible */
+        [data-testid="stFileUploader"] section div small {
+            color: #6b7280 !important;
+            visibility: visible !important;
+            display: block !important;
+            margin-top: 4px !important;
+        }
+        
+        /* Make sure the limit text is visible */
+        [data-testid="stFileUploader"] section div:first-child {
+            color: #6b7280 !important;
+            visibility: visible !important;
+        }
+        
+        /* Ensure the "ZIP files only" text is visible */
+        [data-testid="stFileUploader"] section div:first-child small {
+            color: #6b7280 !important;
+            visibility: visible !important;
+            display: inline-block !important;
+        }
+        
         /* Style for uploaded files list */
         [data-testid="stFileUploader"] ul {
             list-style: none !important;
@@ -1299,11 +1320,11 @@ def main():
     </style>
     """, unsafe_allow_html=True)
 
-    # Initialize file uploader with visible size limit
+    # Initialize file uploader with explicit size limit text
     uploaded_file = st.file_uploader(
         "Drop ZIP file here",
         type="zip",
-        help="Maximum size: 200MB",
+        help="Maximum size: 200MB • ZIP files only",
         key="file_uploader",
         label_visibility="visible"
     )
