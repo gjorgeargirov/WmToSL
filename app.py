@@ -1326,15 +1326,42 @@ def main():
         size_text = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb/1024:.2f} MB"
         
         st.markdown(f"""
-        <div class="file-info-card">
-            <div class="file-details">
-                <span class="file-icon">📄</span>
+        <div style="
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        ">
+            <div style="
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            ">
+                <span style="color: #6b7280;">📄</span>
                 <div>
-                    <div class="file-name">{uploaded_file.name}</div>
-                    <div class="file-size">Size: {size_text}</div>
-                    </div>
-                    </div>
-            <div class="status-badge">Ready ✓</div>
+                    <div style="
+                        color: #1e40af;
+                        font-weight: 500;
+                        font-size: 0.875rem;
+                    ">{uploaded_file.name}</div>
+                    <div style="
+                        color: #6b7280;
+                        font-size: 0.75rem;
+                    ">Size: {size_text}</div>
+                </div>
+            </div>
+            <div style="
+                background: #ecfdf5;
+                color: #065f46;
+                padding: 0.25rem 0.75rem;
+                border-radius: 9999px;
+                font-size: 0.75rem;
+                font-weight: 500;
+            ">Ready ✓</div>
         </div>
         """, unsafe_allow_html=True)
     
