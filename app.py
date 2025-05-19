@@ -80,6 +80,42 @@ st.markdown("""
             visibility: visible !important;
             color: inherit !important;
         }
+        
+        /* File uploader styling */
+        [data-testid="stFileUploader"] {
+            width: 100%;
+        }
+        
+        [data-testid="stFileUploader"] > section {
+            padding: 1rem;
+            border: 1px dashed #6366f1;
+            border-radius: 8px;
+        }
+        
+        /* Make file uploader text visible */
+        [data-testid="stFileUploader"] > section > div {
+            color: #6b7280 !important;
+            visibility: visible !important;
+        }
+        
+        [data-testid="stFileUploader"] small {
+            color: #6b7280 !important;
+            visibility: visible !important;
+            display: block !important;
+        }
+        
+        [data-testid="stFileUploader"] .drag-text {
+            color: #4b5563 !important;
+            visibility: visible !important;
+        }
+        
+        /* File size limit text */
+        [data-testid="stFileUploader"] .upload-text {
+            color: #6b7280 !important;
+            font-size: 0.875rem !important;
+            visibility: visible !important;
+            margin-top: 0.25rem !important;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -1233,12 +1269,13 @@ def main():
     </style>
     """, unsafe_allow_html=True)
 
-    # Initialize file uploader
+    # Initialize file uploader with visible size limit
     uploaded_file = st.file_uploader(
         "Drop ZIP file here",
         type="zip",
         help="Maximum size: 200MB",
-        key="file_uploader"
+        key="file_uploader",
+        label_visibility="visible"
     )
 
     # Initialize start_button variable
