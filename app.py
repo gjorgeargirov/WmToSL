@@ -13,8 +13,39 @@ st.set_page_config(
     page_title="WebMethods to SnapLogic Migration",
     page_icon="icon.webp",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="collapsed"
 )
+
+# Force light theme and disable theme customization
+st.markdown("""
+    <style>
+        /* Force light theme */
+        [data-testid="stAppViewContainer"] {
+            background-color: white;
+        }
+        
+        /* Hide theme customization */
+        [data-testid="collapsedControl"] { display: none; }
+        #MainMenu { display: none; }
+        header { display: none; }
+        footer { display: none; }
+        
+        /* Override any dark theme colors */
+        .stMarkdown, .stText {
+            color: #111827 !important;
+        }
+        
+        /* Ensure buttons have consistent colors */
+        .stButton > button {
+            color: white !important;
+        }
+        
+        /* Progress bar color */
+        .stProgress > div > div {
+            background: linear-gradient(to right, #6366f1, #4f46e5);
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # Initialize session state for migration status
 if 'is_migrating' not in st.session_state:
@@ -1193,36 +1224,67 @@ def main():
                 <div>
                     <div class="file-name">{uploaded_file.name}</div>
                     <div class="file-size">Size: {size_text}</div>
-                </div>
-            </div>
+                    </div>
+                    </div>
             <div class="status-badge">Ready ✓</div>
         </div>
         """, unsafe_allow_html=True)
-
+    
         # Start Migration button
         col1, col2 = st.columns([1, 3])
         with col1:
-            start_button = st.button(
-                "⚡ Start Migration",
-                key="start_migration",
-                help="Begin the migration process",
-                disabled=st.session_state.is_migrating
-            )
+            if not st.session_state.is_migrating:
+                start_button = st.button(
+                    "⚡ START MIGRATION",
+                    key="start_migration",
+                    help="Begin the migration process",
+                    use_container_width=True
+                )
+            else:
+                stop_button = st.button(
+                    "⬛ STOP MIGRATION",
+                    key="stop_migration",
+                    help="Stop the migration process",
+                    type="secondary",
+                    use_container_width=True
+                )
+                if stop_button:
+                    st.session_state.is_migrating = False
+                    st.rerun()
         
         with col2:
             if not st.session_state.is_migrating:
                 st.markdown("""
-                <div class="ready-indicator">
-                    <span class="dot"></span>
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    color: #9ca3af;
+                    font-size: 0.875rem;
+                    margin-top: 0.5rem;
+                ">
+                    <div style="
+                        width: 6px;
+                        height: 6px;
+                        background-color: #10b981;
+                        border-radius: 50%;
+                    "></div>
                     Ready to start the migration process
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown("""
-                <div class="ready-indicator">
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    color: #9ca3af;
+                    font-size: 0.875rem;
+                    margin-top: 0.5rem;
+                ">
                     <div style="
-                        width: 8px;
-                        height: 8px;
+                        width: 6px;
+                        height: 6px;
                         border: 2px solid #3b82f6;
                         border-top-color: transparent;
                         border-radius: 50%;
