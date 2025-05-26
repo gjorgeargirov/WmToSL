@@ -173,6 +173,8 @@ st.markdown("""
 # Initialize session state for migration status
 if 'is_migrating' not in st.session_state:
     st.session_state.is_migrating = False
+if 'migration_complete' not in st.session_state:
+    st.session_state.migration_complete = False
 
 # Custom CSS for the app
 st.markdown("""
@@ -1160,6 +1162,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def main():
+    # Initialize session states
+    if 'is_migrating' not in st.session_state:
+        st.session_state.is_migrating = False
+    if 'migration_complete' not in st.session_state:
+        st.session_state.migration_complete = False
+
     # Logo and title in the header
     col1, col2 = st.columns([1, 5])
     
@@ -1672,25 +1680,13 @@ def main():
                     # Reset migration status
                     st.session_state.is_migrating = False
                     
-                    # Clear previous progress messages but keep the time
-                    status_container.empty()
+                    # Clear progress elements except status container
                     progress_bar.empty()
                     processing_header.empty()
+                    time_container.empty()
                     
-                    # Final time update
-                    elapsed_time = int(time.time() - start_time)
-                    time_container.markdown(f"""
-                    <div style="
-                        text-align: right;
-                        color: #3b82f6;
-                        font-size: 0.875rem;
-                    ">
-                        Total time: {elapsed_time // 60}m {elapsed_time % 60}s
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Show success message with modern styling
-                    st.markdown("""
+                    # Show success message in the status container
+                    status_container.markdown("""
                     <div style="margin-top: 2rem;">
                         <div style="background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem;">
                             <div style="display: flex; align-items: center; gap: 1rem;">

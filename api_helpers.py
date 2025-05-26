@@ -79,8 +79,7 @@ def send_to_api(uploaded_file, migration_options):
             response = session.post(
                 config.API_ENDPOINT,
                 files=files,
-                headers=headers,
-                timeout=600  # 10 minutes timeout
+                headers=headers
             )
             
             # Debug: print status and content
@@ -108,7 +107,7 @@ def send_to_api(uploaded_file, migration_options):
             print(f"Connection error: {str(e)}")
             return {"success": False, "error": f"Connection error: {str(e)}"}
         except requests.exceptions.ReadTimeout:
-            return {"success": False, "error": "API request timed out after 10 minutes. The server might be busy or the file may be too large."}
+            return {"success": False, "error": "API request timed out. The server might be busy or the file may be too large."}
     except requests.exceptions.RequestException as e:
         return {"success": False, "error": f"Connection error: {str(e)}"}
     except Exception as e:
