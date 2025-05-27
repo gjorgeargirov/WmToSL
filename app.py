@@ -170,11 +170,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state for migration status
+# Initialize session states
 if 'is_migrating' not in st.session_state:
     st.session_state.is_migrating = False
-if 'migration_complete' not in st.session_state:
-    st.session_state.migration_complete = False
+if 'migration_status' not in st.session_state:
+    st.session_state.migration_status = 'not_started'
 
 # Custom CSS for the app
 st.markdown("""
@@ -1165,8 +1165,8 @@ def main():
     # Initialize session states
     if 'is_migrating' not in st.session_state:
         st.session_state.is_migrating = False
-    if 'migration_complete' not in st.session_state:
-        st.session_state.migration_complete = False
+    if 'migration_status' not in st.session_state:
+        st.session_state.migration_status = 'not_started'
 
     # Logo and title in the header
     col1, col2 = st.columns([1, 5])
@@ -1385,30 +1385,20 @@ def main():
         </div>
         """, unsafe_allow_html=True)
     
-        # Start Migration button
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            if not st.session_state.is_migrating:
+        # Start Migration button container
+        button_container = st.empty()
+        status_text_container = st.empty()
+        
+        # Show appropriate button based on migration state
+        if not st.session_state.is_migrating:
+            with button_container:
                 start_button = st.button(
                     "⚡ START MIGRATION",
                     key="start_migration",
                     help="Begin the migration process",
                     use_container_width=True
                 )
-            else:
-                stop_button = st.button(
-                    "⬛ STOP MIGRATION",
-                    key="stop_migration",
-                    help="Stop the migration process",
-                    type="secondary",
-                    use_container_width=True
-                )
-                if stop_button:
-                    st.session_state.is_migrating = False
-                    st.rerun()
-        
-        with col2:
-            if not st.session_state.is_migrating:
+            with status_text_container:
                 st.markdown("""
                 <div style="
                     display: flex;
@@ -1427,7 +1417,19 @@ def main():
                     Ready to start the migration process
                 </div>
                 """, unsafe_allow_html=True)
-            else:
+        elif st.session_state.migration_status == 'not_started':
+            with button_container:
+                stop_button = st.button(
+                    "⬛ STOP MIGRATION",
+                    key="stop_migration",
+                    help="Stop the migration process",
+                    type="secondary",
+                    use_container_width=True
+                )
+                if stop_button:
+                    st.session_state.is_migrating = False
+                    st.rerun()
+            with status_text_container:
                 st.markdown("""
                 <div style="
                     display: flex;
@@ -1677,16 +1679,20 @@ def main():
                 
                 # Handle the API response
                 if result.get("success"):
-                    # Reset migration status
+                    # Reset migration status and set completion flag
                     st.session_state.is_migrating = False
+                    st.session_state.migration_status = 'completed'
                     
-                    # Clear progress elements except status container
+                    # Clear all progress and status elements
                     progress_bar.empty()
                     processing_header.empty()
                     time_container.empty()
+                    status_container.empty()
+                    button_container.empty()
+                    status_text_container.empty()
                     
-                    # Show success message in the status container
-                    status_container.markdown("""
+                    # Show success message in a new container
+                    st.markdown("""
                     <div style="margin-top: 2rem;">
                         <div style="background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem;">
                             <div style="display: flex; align-items: center; gap: 1rem;">
@@ -1703,13 +1709,50 @@ def main():
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
+                    
+                    # Update the button to allow new migration
+                    col1, col2 = st.columns([1, 3])
+                    with col1:
+                        if st.button(
+                            "🔄 MIGRATE ANOTHER",
+                            key="migrate_another",
+                            use_container_width=True
+                        ):
+                            # Reset all states to start fresh
+                            st.session_state.is_migrating = False
+                            st.session_state.migration_status = 'not_started'
+                            st.rerun()
+                    with col2:
+                        st.markdown("""
+                        <div style="
+                            display: flex;
+                            align-items: center;
+                            gap: 0.5rem;
+                            color: #047857;
+                            font-size: 0.875rem;
+                            margin-top: 0.5rem;
+                        ">
+                            <div style="
+                                width: 6px;
+                                height: 6px;
+                                background-color: #34d399;
+                                border-radius: 50%;
+                            "></div>
+                            Ready to start another migration
+                        </div>
+                        """, unsafe_allow_html=True)
                 else:
-                    # Reset migration status on error
+                    # Reset migration status and set completion flag
                     st.session_state.is_migrating = False
-                    # Clear previous progress messages
-                    status_container.empty()
-                    time_container.empty()
+                    st.session_state.migration_status = 'failed'
+                    
+                    # Clear all progress and status elements
                     progress_bar.empty()
+                    processing_header.empty()
+                    time_container.empty()
+                    status_container.empty()
+                    button_container.empty()
+                    status_text_container.empty()
                     
                     # Show error message if the API call was not successful
                     error_message = result.get("error", "An unknown error occurred")
@@ -1730,6 +1773,35 @@ def main():
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
+                    
+                    # Update the button status to show error without animation
+                    col1, col2 = st.columns([1, 3])
+                    with col1:
+                        st.button(
+                            "× FAILED",
+                            key="failed_button",
+                            disabled=True,
+                            use_container_width=True
+                        )
+                    with col2:
+                        st.markdown("""
+                        <div style="
+                            display: flex;
+                            align-items: center;
+                            gap: 0.5rem;
+                            color: #991b1b;
+                            font-size: 0.875rem;
+                            margin-top: 0.5rem;
+                        ">
+                            <div style="
+                                width: 6px;
+                                height: 6px;
+                                background-color: #ef4444;
+                                border-radius: 50%;
+                            "></div>
+                            Migration failed. Please try again.
+                        </div>
+                        """, unsafe_allow_html=True)
 
             except Exception as e:
                 # Reset migration status on error
