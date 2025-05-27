@@ -1490,7 +1490,7 @@ def main():
         else:
             # Create a card for the processing section
             processing_header = st.empty()
-            processing_header.subheader("🔄 Processing Migration")
+            processing_header.subheader("Processing Migration")
             
             # Create single progress bar and time container
             progress_bar = st.progress(0)
